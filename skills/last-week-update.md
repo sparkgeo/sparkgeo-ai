@@ -1,0 +1,89 @@
+---
+name: last-week-update
+description: >-
+  Generate a concise weekly status update from git commits, GitHub PRs, and
+  issues. Outputs merged PRs, closed issues, and in-progress work as a
+  markdown bulleted list plus a one-liner for Slack. Triggers on weekly update,
+  what did I get done, status update, last week, standup, or weekly summary.
+---
+
+# Weekly Status Update
+
+Generate a high-signal summary of shipped and in-progress work.
+
+## Workflow
+
+1. **Resolve dates** — map the requested window (e.g. "last week") to
+   concrete `--after` / `--before` dates.
+
+2. **Gather commits**
+
+```bash
+git log --author="$(git config user.email)" \
+  --after="<start>" --before="<end>" \
+  --no-merges --format="%h %ad%n%B---" --date=short
+```
+
+3. **Gather PRs** (merged and open, authored by me, updated in window)
+
+```bash
+gh pr list --author @me --search "updated:>=<start>" \
+  --state all --json number,title,state,mergedAt,url,headRefName
+```
+
+4. **Gather issues** (assigned to me, updated in window)
+
+```bash
+gh issue list --assignee @me --search "updated:>=<start>" \
+  --state all --json number,title,state,url
+```
+
+5. **Check current branch** — if the current branch has no PR yet, note it
+   as in-progress work.
+
+```bash
+gh pr list --author @me --search "head:$(git branch --show-current)" \
+  --state all --json number,title,state,url
+```
+
+6. **Synthesize** — categorise items and format output.
+
+## Output Format
+
+```markdown
+**Week of <start> – <end>**
+
+<1–2 sentence summary of the most impactful shipped work.>
+
+### Merged PRs
+
+- [#N — Title](url)
+- [#N — Title](url)
+
+### Issues Closed
+
+- [#N — Title](url)
+
+### In Progress
+
+- [#N — Title](url) — brief status note
+- [#N — Title](url) — brief status note
+
+---
+
+**Summary for Slack:**
+
+> Last week (<dates>): <concise one-liner covering merged, closed, and WIP>
+```
+
+## Guardrails
+
+- Be extremely concise and information-dense.
+- Prioritise substantial behaviour or architecture changes.
+- Omit cosmetic-only changes (formatting, imports, minor renames) from the
+  summary sentence; still list their PRs.
+- Do not infer intent or motivation. Describe changes functionally.
+- Exclude merge commits and uncommitted changes from the commit scan.
+- Always include the real date range used.
+- Use bulleted lists, not tables.
+- Link every PR and issue number to its GitHub URL.
