@@ -14,6 +14,7 @@ Sparkgeo AI
 
 [Agents](/agents/)
 
+* [agnt-stac-guide](/agents/agnt-stac-guide.md)
 * [architect-review](/agents/architect-review.md)
 * [backend-architect](/agents/backend-architect.md)
 * [code-reviewer](/agents/code-reviewer.md)
@@ -26,6 +27,10 @@ Sparkgeo AI
 * [ui-ux-designer](/agents/ui-ux-designer.md)
 * [ui-visual-validator](/agents/ui-visual-validator.md)
 
+
+[Commands](/commands/)
+
+* [create-stac](/commands/create-stac.md)
 
 [MCP Servers](/mcp/)
 
