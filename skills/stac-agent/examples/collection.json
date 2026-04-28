@@ -1,0 +1,50 @@
+{
+  "type": "Collection",
+  "id": "bc-dem-2024",
+  "stac_version": "1.0.0",
+  "title": "BC Digital Elevation Model 2024",
+  "description": "1-metre resolution digital elevation model tiles derived from airborne LiDAR surveys across British Columbia, Canada. Data is provided as Cloud Optimized GeoTIFFs in UTM Zone 10N (EPSG:32610).",
+  "license": "OGL-Canada-2.0",
+  "providers": [
+    {
+      "name": "BC Ministry of Forests",
+      "roles": ["producer", "licensor"],
+      "url": "https://www2.gov.bc.ca/gov/content/industry/forestry"
+    },
+    {
+      "name": "Sparkgeo",
+      "roles": ["processor"],
+      "url": "https://sparkgeo.com"
+    }
+  ],
+  "extent": {
+    "spatial": {
+      "bbox": [[-139.06, 48.30, -114.03, 60.00]]
+    },
+    "temporal": {
+      "interval": [["2024-04-01T00:00:00Z", "2024-09-30T00:00:00Z"]]
+    }
+  },
+  "summaries": {
+    "platform": ["airborne-lidar"],
+    "gsd": [1.0],
+    "proj:code": ["EPSG:32610"]
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "self",
+      "href": "./collection.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./items/bc-dem-2024-092b-20240612.json",
+      "type": "application/geo+json"
+    }
+  ]
+}

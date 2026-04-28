@@ -1,0 +1,48 @@
+# collection-config.yaml
+# Fill in this file to bypass the Q&A step in the stac-agent workflow.
+# Pass it to build.py with --config, or hand it to your agent before building.
+
+collection:
+  id: my-collection             # URL-safe identifier — no spaces (e.g. sentinel2-bc-2024)
+  title: "My Collection"        # Short human-readable name
+  description: >                # 1–3 sentences: what the data is, where, when, how processed
+    Describe what this dataset contains, its spatial coverage,
+    and any relevant processing or acquisition details.
+  license: proprietary          # SPDX identifier (e.g. CC-BY-4.0, OGL-Canada-2.0) or "proprietary"
+  providers:
+    - name: "Organisation Name"
+      roles: [producer]         # producer | licensor | processor | host (list, can combine)
+      url: "https://example.com"
+
+# How to group rasters into STAC Items.
+# one-per-file:   each .tif becomes its own Item (default)
+# group-by-prefix: rasters sharing a common path prefix become one multi-asset Item
+# group-by-regex:  use a named capture group to define scene IDs
+grouping:
+  mode: one-per-file
+  # regex: "(?P<scene_id>[A-Z0-9_]+)_B\\d+\\.tif"
+
+# Band semantics — only needed for multi-band rasters.
+# Remove or comment out for single-band data.
+# bands:
+#   - name: blue
+#     common_name: blue
+#   - name: green
+#     common_name: green
+#   - name: red
+#     common_name: red
+#   - name: nir
+#     common_name: nir
+
+# Sidecar file roles — only needed if sidecar files are present.
+# Maps file extensions to asset roles.
+# sidecar_roles:
+#   ".xml": [metadata]
+#   ".ovr": [overview]
+#   ".png": [thumbnail]
+
+# Temporal hint — only needed when dates cannot be inferred from filenames.
+# Tell the agent where to find the date in each filename.
+# temporal_hint:
+#   format: "%Y%m%d"
+#   description: "8-digit date starting at character 16 of the filename"
