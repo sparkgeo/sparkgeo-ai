@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# script/update
+# Pulls the latest sparkgeo-ai configs and re-applies symlinks.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+printf '\033[0;34m[info]\033[0m  pulling latest...\n'
+git -C "$REPO_DIR" pull --ff-only
+
+printf '\n'
+"$SCRIPT_DIR/setup"

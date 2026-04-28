@@ -1,0 +1,10 @@
+# sparkgeo-ai link manifest
+# Format: source_pattern:destination
+#   source_pattern  path relative to repo root; shell globs supported
+#   destination     absolute path; ~ expands to $HOME; trailing / = link into dir
+#
+# Run script/setup to apply. Run script/update to pull + re-apply.
+
+agents/*.md:~/.claude/agents/
+commands/*.md:~/.claude/commands/
+skills/*.md:~/.claude/commands/

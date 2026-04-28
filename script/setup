@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# script/setup
+# Creates symlinks defined in script/links. Safe to re-run.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+LINKS_FILE="$SCRIPT_DIR/links"
+
+ok()   { printf '\033[0;32m[ok]\033[0m    %s\n' "$*"; }
+info() { printf '\033[0;34m[info]\033[0m  %s\n' "$*"; }
+warn() { printf '\033[0;33m[warn]\033[0m  %s\n' "$*"; }
+skip() { printf '\033[0;90m[skip]\033[0m  %s\n' "$*"; }
+
+safe_symlink() {
+  local src="$1" dest="$2"
+  mkdir -p "$(dirname "$dest")"
+  if [[ -L "$dest" ]]; then
+    if [[ "$(readlink "$dest")" == "$src" ]]; then
+      skip "already linked: $(basename "$dest")"
+    else
+      warn "symlink points elsewhere, skipping: $dest"
+    fi
+  elif [[ -e "$dest" ]]; then
+    warn "file exists, skipping: $dest"
+  else
+    ln -s "$src" "$dest"
+    ok "linked: $dest"
+  fi
+}
+
+process_link() {
+  local src_pattern="$1"
+  local dest_raw="${2/\~/$HOME}"
+  local into_dir=false
+  local dest matched=0
+
+  [[ "$dest_raw" == */ ]] && into_dir=true
+  dest="${dest_raw%/}"
+
+  for src in "$REPO_DIR"/$src_pattern; do
+    [[ -e "$src" ]] || continue
+    [[ "$(basename "$src")" == ".gitkeep" ]] && continue
+    if $into_dir; then
+      safe_symlink "$src" "$dest/$(basename "$src")"
+    else
+      safe_symlink "$src" "$dest"
+    fi
+    (( matched++ )) || true
+  done
+
+  [[ $matched -gt 0 ]] || skip "no files matched: $src_pattern"
+}
+
+info "sparkgeo-ai setup — $REPO_DIR"
+
+while IFS= read -r line; do
+  [[ -z "${line// }" || "$line" == \#* ]] && continue
+  process_link "${line%%:*}" "${line#*:}"
+done < "$LINKS_FILE"
+
+ok "done"
