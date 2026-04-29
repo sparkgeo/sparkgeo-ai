@@ -1,31 +1,45 @@
-Sparkgeo AI
------------
+# Sparkgeo AI
+
+A shared repository of reusable AI skills, agent prompts, rules, and workflows for common tasks across Sparkgeo. Use it in Cursor or Claude Code. The goal is to make AI usage more consistent, higher quality, and easier to reuse across teams.
+
+## What lives here
 
 
+| Area                             | Purpose                                                                                     |
+| -------------------------------- | ------------------------------------------------------------------------------------------- |
+| `[agents/](agents/)`             | Agent definitions (system prompts / specialist behaviors). Add one markdown file per agent. |
+| `[skills/](skills/)`             | Reusable skills and step-by-step instructions or checklists for repeatable tasks.           |
+| `[rules/](rules/)`               | Baseline rules loaded into AI sessions (coding standards, git habits, org preferences).     |
+| `[mcp/](mcp/)`                   | Notes, configs, or pointers related to Model Context Protocol servers used at Sparkgeo.     |
+| `[guidelines.md](guidelines.md)` | High-level guidelines for using this repo and AI tooling consistently.                      |
 
 
-# Table of Contents
+## Using this repo
 
-[Guidelines](/guidelines.md)
+1. **Clone or submodule** this repository next to your project, or copy individual files into a project’s `.cursor/`, `.claude/`, or equivalent directory.
+2. **Prefer small, composable pieces**: one agent per file and focused rules.
+3. **Update here first** when improving a shared prompt so everyone benefits.
 
-[Rules](/rules/)
+## Contributing
 
-* [base](/rules/base.md)
+Contributions are welcome from all teams.
 
-[Agents](/agents/)
+Before adding a new workflow:
 
-* [architect-review](/agents/architect-review.md)
-* [backend-architect](/agents/backend-architect.md)
-* [code-reviewer](/agents/code-reviewer.md)
-* [django-pro](/agents/django-pro.md)
-* [fastapi-pro](/agents/fastapi-pro.md)
-* [geospatial-frontend-developer](/agents/geospatial-frontend-developer.md)
-* [javascript-pro](/agents/javascript-pro.md)
-* [performance-engineer](/agents/performance-engineer.md)
-* [security-auditor](/agents/security-auditor.md)
-* [ui-ux-designer](/agents/ui-ux-designer.md)
-* [ui-visual-validator](/agents/ui-visual-validator.md)
+- Check if a similar workflow already exists.
+- Prefer improving existing workflows over creating duplicates.
+- Ensure workflows reference relevant standards where appropriate.
 
+## Repository layout
 
-[MCP Servers](/mcp/)
+```
+sparkgeo-ai/
+├── README.md
+├── guidelines.md
+├── agents/
+├── skills/
+├── rules/
+│   └── base.md
+└── mcp/
+```
 
