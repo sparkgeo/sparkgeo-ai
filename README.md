@@ -12,9 +12,9 @@ A shared repository of reusable AI skills, agent prompts, rules, and workflows f
 
 ## Using this repo
 
-1. Clone or submodule this repository next to your project, or copy individual files into a project’s `.cursor/`, `.claude/`, or equivalent directory.
+1. Add workflows inside the project repo (often `.cursor/` or `.claude/`), or in your editor’s user-level skills or rules folder so they apply globally. 
 2. Prefer small, composable pieces: one agent per file and focused rules.
-3. When adding or improving workflows, open a pull request and request review from at least one other team member.
+3. When adding or improving workflows, open a pull request and request review from at least one AI working group member.
 
 ## Contributing
 
