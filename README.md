@@ -14,17 +14,17 @@ A shared repository of reusable AI skills, agent prompts, rules, and workflows f
 
 1. Clone or submodule this repository next to your project, or copy individual files into a project’s `.cursor/`, `.claude/`, or equivalent directory.
 2. Prefer small, composable pieces: one agent per file and focused rules.
-3. When adding or improving a workflow or agent, add a pr and tag at least one other team member.
+3. When adding or improving workflows, open a pull request and request review from at least one other team member.
 
 ## Contributing
 
 Contributions are welcome from all teams.
 
-Before adding a new workflow:
+Before adding or substantially changing an agent, skill, rule, or workflow:
 
-- Check if a similar workflow already exists.
-- Prefer improving existing workflows over creating duplicates.
-- Ensure workflows reference relevant standards where appropriate.
+- Check if something similar already exists.
+- Prefer improving existing content over creating duplicates.
+- Reference relevant standards where appropriate (security, geospatial, or team-specific).
 
 ## Creating a basic skill
 
@@ -38,7 +38,7 @@ description: A clear description of what this skill does and when to use it
 
 # My Skill Name
 
-[Add your instructions here that Claude will follow when this skill is active]
+[Add your instructions here for the assistant to follow when this skill is active]
 
 ## Examples
 
@@ -49,5 +49,36 @@ description: A clear description of what this skill does and when to use it
 
 - Guideline 1
 - Guideline 2
+```
+
+## Creating a basic agent
+
+Add one markdown file under [agents/](agents/). Example outline:
+
+```markdown
+---
+name: my-agent-name
+description: When to invoke this agent and what it is responsible for
+---
+
+You are [role in one sentence — e.g. a senior backend reviewer for STAC services].
+
+## Purpose
+
+[What outcomes this agent optimizes for]
+
+## Capabilities
+
+- [Capability or topic area 1]
+- [Capability or topic area 2]
+
+## Constraints
+
+- [What the agent should not do, or boundaries]
+
+## How you work
+
+1. [First step or habit — e.g. read surrounding code before suggesting edits]
+2. [Second step]
 ```
 
