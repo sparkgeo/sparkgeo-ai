@@ -12,7 +12,7 @@ A shared repository of reusable AI skills, agent prompts, rules, and workflows f
 
 ## Using this repo
 
-1. Add workflows inside the project repo (often `.cursor/` or `.claude/`), or in your editor’s user-level skills or rules folder so they apply globally. 
+1. Add workflows inside the project repo (often `.cursor/` or `.claude/`), or in your editor’s user-level skills or rules folder so they apply globally.
 2. Prefer small, composable pieces: one agent per file and focused rules.
 3. When adding or improving workflows, open a pull request and request review from at least one AI working group member.
 
@@ -81,4 +81,3 @@ You are [role in one sentence — e.g. a senior backend reviewer for STAC servic
 1. [First step or habit — e.g. read surrounding code before suggesting edits]
 2. [Second step]
 ```
-
