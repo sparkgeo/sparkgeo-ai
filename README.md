@@ -8,7 +8,6 @@ A shared repository of reusable AI skills, agent prompts, rules, and workflows f
 - **[skills/](skills/)**: Reusable skills and step-by-step instructions or checklists for repeatable tasks.
 - **[rules/](rules/)**: Baseline rules loaded into AI sessions (coding standards, git habits, org preferences).
 - **[mcp/](mcp/)**: Notes, configs, or pointers related to Model Context Protocol servers used at Sparkgeo.
-- **[guidelines.md](guidelines.md)**: High-level guidelines for using this repo and AI tooling consistently.
 
 ## Using this repo
 
