@@ -1,6 +1,6 @@
 # Sparkgeo AI
 
-A shared repository of reusable AI skills, agent prompts, rules, and workflows for common tasks across Sparkgeo. Use it in Cursor or Claude Code. The goal is to make AI usage more consistent, higher quality, and easier to reuse across teams.
+A shared repository of reusable AI skills, agent prompts, rules, and workflows for common tasks across Sparkgeo. Use it in Cursor, Claude Code, or any AI tool that supports skills and rules. The goal is to make AI usage more consistent, higher quality, and easier to reuse across teams. Skills follow the [agentskills.io](https://agentskills.io) spec.
 
 ## What lives here
 
@@ -15,6 +15,17 @@ A shared repository of reusable AI skills, agent prompts, rules, and workflows f
 2. Prefer small, composable pieces: one agent per file and focused rules.
 3. When adding or improving workflows, open a pull request and request review from at least one AI working group member.
 
+## Installing skills
+
+Copy a skill folder to a location your tool discovers automatically.
+Example — install `stac-agent` globally for Claude Code:
+
+```sh
+cp -r skills/stac-agent ~/.claude/skills/
+```
+
+Global installs apply to all projects. Project-level installs scope to one repo.
+
 ## Contributing
 
 Contributions are welcome from all teams.
@@ -26,6 +37,8 @@ Before adding or substantially changing an agent, skill, rule, or workflow:
 - Reference relevant standards where appropriate (security, geospatial, or team-specific).
 
 ## Creating a basic skill
+
+Follow the [agentskills.io skill creation guide](https://agentskills.io/skill-creation/) for the full spec. The template below is a minimal starting point.
 
 Add a folder with a `SKILL.md` file containing instructions. Example structure:
 

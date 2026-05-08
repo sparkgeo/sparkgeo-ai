@@ -21,10 +21,10 @@ import yaml
 from shapely.geometry import box, mapping, shape
 from shapely.ops import unary_union
 
-EXT_PROJ = "https://stac-extensions.github.io/projection/v1.1.0/schema.json"
-EXT_RASTER = "https://stac-extensions.github.io/raster/v1.1.0/schema.json"
-EXT_FILE = "https://stac-extensions.github.io/file/v2.0.0/schema.json"
-EXT_EO = "https://stac-extensions.github.io/eo/v1.1.0/schema.json"
+EXT_PROJ = "https://stac-extensions.github.io/projection/v2.0.0/schema.json"
+EXT_RASTER = "https://stac-extensions.github.io/raster/v2.0.0/schema.json"
+EXT_FILE = "https://stac-extensions.github.io/file/v2.1.0/schema.json"
+EXT_EO = "https://stac-extensions.github.io/eo/v2.0.0/schema.json"
 
 
 def clean_id(name: str) -> str:
@@ -40,8 +40,6 @@ def _item_base(meta: dict, bands_config: list | None) -> pystac.Item:
     dt = datetime.fromisoformat(dt_str) if dt_str else None
 
     extensions = [EXT_PROJ, EXT_RASTER, EXT_FILE]
-    if bands_config:
-        extensions.append(EXT_EO)
 
     item = pystac.Item(
         id="",  # caller sets id
@@ -61,19 +59,6 @@ def _item_base(meta: dict, bands_config: list | None) -> pystac.Item:
         item.properties["proj:code"] = f"EPSG:{meta['crs_epsg']}"
     item.properties["proj:shape"] = [meta["height"], meta["width"]]
 
-    band_metas = []
-    for _ in range(meta["band_count"]):
-        b = {"data_type": meta["dtype"]}
-        if meta.get("nodata") is not None:
-            b["nodata"] = meta["nodata"]
-        if meta.get("resolution"):
-            b["spatial_resolution"] = meta["resolution"][0]
-        band_metas.append(b)
-    item.properties["raster:bands"] = band_metas
-
-    if bands_config:
-        item.properties["eo:bands"] = bands_config
-
     return item
 
 
@@ -86,6 +71,22 @@ def build_item(meta: dict, size_map: dict, bands_config: list | None) -> pystac.
     if size_map.get(uri):
         item.properties["file:size"] = size_map[uri]
 
+    raster_bands = []
+    for _ in range(meta["band_count"]):
+        b = {"data_type": meta["dtype"]}
+        if meta.get("nodata") is not None:
+            b["nodata"] = meta["nodata"]
+        if meta.get("resolution"):
+            b["raster:spatial_resolution"] = meta["resolution"][0]
+        raster_bands.append(b)
+    if bands_config and len(bands_config) == len(raster_bands):
+        for i, eo in enumerate(bands_config):
+            if "name" in eo:
+                raster_bands[i]["name"] = eo["name"]
+            for key in ("common_name", "center_wavelength", "full_width_half_max", "solar_illumination"):
+                if key in eo:
+                    raster_bands[i][f"eo:{key}"] = eo[key]
+        item.stac_extensions.append(EXT_EO)
     item.add_asset(
         "data",
         pystac.Asset(
@@ -93,6 +94,7 @@ def build_item(meta: dict, size_map: dict, bands_config: list | None) -> pystac.
             media_type=meta["media_type"],
             roles=["data"],
             title=uri.split("/")[-1],
+            extra_fields={"bands": raster_bands} if raster_bands else {},
         ),
     )
     return item
@@ -135,6 +137,22 @@ def build_item_group(
         item.properties["file:size"] = size_map[primary["uri"]]
 
     # Primary raster
+    raster_bands = []
+    for _ in range(primary["band_count"]):
+        b = {"data_type": primary["dtype"]}
+        if primary.get("nodata") is not None:
+            b["nodata"] = primary["nodata"]
+        if primary.get("resolution"):
+            b["raster:spatial_resolution"] = primary["resolution"][0]
+        raster_bands.append(b)
+    if bands_config and len(bands_config) == len(raster_bands):
+        for i, eo in enumerate(bands_config):
+            if "name" in eo:
+                raster_bands[i]["name"] = eo["name"]
+            for key in ("common_name", "center_wavelength", "full_width_half_max", "solar_illumination"):
+                if key in eo:
+                    raster_bands[i][f"eo:{key}"] = eo[key]
+        item.stac_extensions.append(EXT_EO)
     item.add_asset(
         "data",
         pystac.Asset(
@@ -142,6 +160,7 @@ def build_item_group(
             media_type=primary["media_type"],
             roles=["data"],
             title=primary["uri"].split("/")[-1],
+            extra_fields={"bands": raster_bands} if raster_bands else {},
         ),
     )
 
