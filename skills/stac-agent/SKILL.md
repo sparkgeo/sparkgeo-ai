@@ -1,13 +1,13 @@
 ---
 name: stac-agent
-description: Build and validate a static STAC Catalog from GeoTIFF/COG raster files at a protected S3 location. Covers inventory, raster inspection, STAC Item/Collection/Catalog creation, validation, and optional publishing. Source data is never moved, copied, or transformed. Trigger phrases: "build STAC from S3", "create catalog from S3", "inventory S3 rasters", "STAC from bucket", "validate STAC catalog".
-compatibility: Requires uv, AWS CLI, and boto3-resolvable S3 credentials. S3 source data must be accessible without credential setup — credentials come from the environment only.
+description: Build and validate a static STAC Catalog from GeoTIFF/COG raster files at an S3 location (public or private). Covers inventory, raster inspection, STAC Item/Collection/Catalog creation, validation, and optional publishing. Source data is never moved, copied, or transformed. Trigger phrases- "build STAC from S3", "create catalog from S3", "inventory S3 rasters", "STAC from bucket", "validate STAC catalog".
+compatibility: Requires uv and AWS CLI. Public buckets need no credentials. Private buckets require boto3-resolvable credentials from the environment.
 allowed-tools: Bash(aws sts get-caller-identity) Bash(aws s3 ls *) Bash(aws s3 cp *) Bash(uv venv *) Bash(uv pip *) Bash(.stac-venv/bin/python *) Read Write
 ---
 
 # STAC Agent
 
-Build a static STAC Catalog from GeoTIFF/COG rasters at a protected S3 location.
+Build a static STAC Catalog from GeoTIFF/COG rasters at an S3 location (public or private).
 Source data is **never** moved, copied, or transformed. All asset HREFs point to the original S3 URIs.
 
 **Arguments:** `$ARGUMENTS`
@@ -17,7 +17,7 @@ Parse into: `S3_SOURCE` (required) and `OUTPUT_PATH` (optional, default `./stac-
 
 ## Ground rules
 
-- Credentials come from the environment — never request, accept, or configure them. If credentials are absent or expired, halt with a clear alert (see Step 0).
+- Public S3 buckets need no credentials — the skill auto-detects them and uses anonymous access. Private buckets require credentials from the environment; never request, accept, or configure credentials yourself. If a private bucket's credentials are absent or expired, halt with a clear alert (see Step 0).
 - Never move, copy, transform, rewrite, or upload source raster assets. Asset HREFs stay as `s3://` URIs throughout.
 - Use `proj:code` (e.g. `"EPSG:32610"`), never the deprecated `proj:epsg`.
 - COG media type: `image/tiff; application=geotiff; profile=cloud-optimized`
@@ -59,20 +59,23 @@ Run `scripts/publish.py` only when the user explicitly requests publishing or wh
 
 ---
 
-## Step 0 — AWS auth check
+## Step 0 — Bucket access check
 
-Before any S3 operation, verify credentials are active:
+Verify the bucket is reachable before installing dependencies:
 
 ```bash
-aws sts get-caller-identity
+aws s3 ls <S3_SOURCE> --no-sign-request 2>/dev/null || aws s3 ls <S3_SOURCE> 2>/dev/null || echo "UNREACHABLE"
 ```
 
-If this command returns a non-zero exit code, **stop immediately — do not proceed to any further step** and print:
+If neither command succeeds, **stop immediately** and print:
 
-> AWS credentials are not configured or have expired.
-> Set AWS_PROFILE, AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, or refresh your SSO session, then rerun.
+> Cannot access `<S3_SOURCE>`.
+> - Public bucket: verify the URI is correct.
+> - Private bucket: configure credentials (AWS_PROFILE, AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, or SSO session), then rerun.
 
-Never run `aws configure`, `aws sso login`, or any other credential-setup command. Credential management is entirely the user's responsibility.
+The pipeline scripts (`inventory.py`, `raster_inspect.py`) detect public vs. private access automatically — no flags needed.
+
+Never run `aws configure`, `aws sso login`, or any credential-setup command. Credential management is the user's responsibility.
 
 ---
 
@@ -88,13 +91,7 @@ aws --version
 
 All subsequent Python invocations use `.stac-venv/bin/python`. Do not use `python3` or `uv run` directly.
 
-Confirm the S3 path is readable:
-
-```
-aws s3 ls <S3_SOURCE> --summarize
-```
-
-If access fails, stop and report the error clearly. Do not attempt credential workarounds.
+Access was confirmed in Step 0. No additional S3 check needed here.
 
 ---
 

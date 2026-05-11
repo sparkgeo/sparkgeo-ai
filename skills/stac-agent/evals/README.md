@@ -2,6 +2,8 @@
 
 Test cases and workspace conventions for evaluating stac-agent output quality.
 
+see. https://github.com/sparkgeo/sparkgeo-ai-eval/tree/main/skills/stac-agent-workspace 
+
 ## Layout
 
 ```

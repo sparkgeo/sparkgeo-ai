@@ -6,7 +6,8 @@ Usage:
     python3 inspect.py s3://bucket/key.tif [s3://bucket/key2.tif ...]
 
 Requires: boto3, rasterio, rio-cogeo, pyproj, shapely
-Credentials are read from the environment — never passed as arguments.
+Public buckets are detected automatically — no flags or credentials required.
+For private buckets, credentials are resolved from the environment.
 """
 
 import argparse
@@ -19,6 +20,9 @@ from urllib.parse import urlparse
 
 import boto3
 import rasterio
+from botocore import UNSIGNED
+from botocore.config import Config
+from botocore.exceptions import ClientError
 from pyproj import CRS
 from rasterio.warp import transform_bounds
 from rio_cogeo.cogeo import cog_validate
@@ -39,6 +43,17 @@ GDAL_ENV = {
 }
 
 
+def _is_public(bucket: str, prefix: str = "") -> bool:
+    """Return True if the bucket allows anonymous list access."""
+    try:
+        boto3.client("s3", config=Config(signature_version=UNSIGNED)).list_objects_v2(
+            Bucket=bucket, Prefix=prefix, MaxKeys=1
+        )
+        return True
+    except ClientError:
+        return False
+
+
 def infer_datetime(uri: str) -> str | None:
     filename = uri.split("/")[-1]
     for pattern, fmt in DATE_PATTERNS:
@@ -51,13 +66,13 @@ def infer_datetime(uri: str) -> str | None:
     return None
 
 
-def inspect_one(uri: str, session: boto3.Session) -> dict:
+def inspect_one(uri: str, gdal_env: dict) -> dict:
     parsed = urlparse(uri)
     vsi_path = f"/vsis3/{parsed.netloc}{parsed.path}"
 
     try:
-        is_cog, cog_errors, cog_warnings = cog_validate(vsi_path, config=GDAL_ENV)
-        with rasterio.Env(**GDAL_ENV):
+        is_cog, cog_errors, cog_warnings = cog_validate(vsi_path, config=gdal_env)
+        with rasterio.Env(**gdal_env):
             with rasterio.open(vsi_path) as ds:
                 crs = CRS.from_wkt(ds.crs.wkt) if ds.crs else None
                 epsg = crs.to_epsg() if crs else None
@@ -112,12 +127,17 @@ def main():
     else:
         parser.error("Provide S3 URIs or --inventory")
 
-    session = boto3.Session()
-    results = [None] * len(uris)
+    parsed = urlparse(uris[0])
+    gdal_env = (
+        {**GDAL_ENV, "AWS_NO_SIGN_REQUEST": "YES"}
+        if _is_public(parsed.netloc, parsed.path.lstrip("/"))
+        else GDAL_ENV
+    )
 
+    results = [None] * len(uris)
     print(f"Inspecting {len(uris)} files...", file=sys.stderr)
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
-        futures = {pool.submit(inspect_one, uri, session): i for i, uri in enumerate(uris)}
+        futures = {pool.submit(inspect_one, uri, gdal_env): i for i, uri in enumerate(uris)}
         for future in as_completed(futures):
             i = futures[future]
             results[i] = future.result()

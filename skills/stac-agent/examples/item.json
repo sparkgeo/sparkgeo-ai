@@ -1,35 +1,21 @@
 {
   "type": "Feature",
-  "stac_version": "1.0.0",
+  "stac_version": "1.1.0",
   "stac_extensions": [
-    "https://stac-extensions.github.io/projection/v1.1.0/schema.json",
-    "https://stac-extensions.github.io/raster/v1.1.0/schema.json",
-    "https://stac-extensions.github.io/file/v2.0.0/schema.json"
+    "https://stac-extensions.github.io/projection/v2.0.0/schema.json",
+    "https://stac-extensions.github.io/raster/v2.0.0/schema.json",
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json"
   ],
   "id": "bc-dem-2024-092b-20240612",
   "geometry": {
     "type": "Polygon",
-    "coordinates": [[
-      [-124.0, 49.0],
-      [-123.0, 49.0],
-      [-123.0, 50.0],
-      [-124.0, 50.0],
-      [-124.0, 49.0]
-    ]]
+    "coordinates": [[[-124.0,49.0],[-123.0,49.0],[-123.0,50.0],[-124.0,50.0],[-124.0,49.0]]]
   },
   "bbox": [-124.0, 49.0, -123.0, 50.0],
   "properties": {
     "datetime": "2024-06-12T00:00:00Z",
     "proj:code": "EPSG:32610",
     "proj:shape": [10000, 10000],
-    "raster:bands": [
-      {
-        "data_type": "float32",
-        "nodata": -9999.0,
-        "spatial_resolution": 1.0,
-        "unit": "metre"
-      }
-    ],
     "file:size": 52428800
   },
   "assets": {
@@ -37,25 +23,15 @@
       "href": "s3://example-bucket/dem/bc-dem-2024-092b-20240612.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
       "title": "bc-dem-2024-092b-20240612.tif",
-      "roles": ["data"]
+      "roles": ["data"],
+      "bands": [{"data_type": "float32", "nodata": -9999.0, "raster:spatial_resolution": 1.0}],
+      "file:size": 52428800
     }
   },
   "links": [
-    {
-      "rel": "root",
-      "href": "../../catalog.json",
-      "type": "application/json"
-    },
-    {
-      "rel": "collection",
-      "href": "../collection.json",
-      "type": "application/json"
-    },
-    {
-      "rel": "self",
-      "href": "./bc-dem-2024-092b-20240612.json",
-      "type": "application/geo+json"
-    }
+    {"rel": "root", "href": "../../catalog.json", "type": "application/json"},
+    {"rel": "collection", "href": "../collection.json", "type": "application/json"},
+    {"rel": "self", "href": "./bc-dem-2024-092b-20240612.json", "type": "application/geo+json"}
   ],
   "collection": "bc-dem-2024"
 }

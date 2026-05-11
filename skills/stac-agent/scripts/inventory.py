@@ -6,7 +6,8 @@ Usage:
     python3 inventory.py s3://bucket/prefix/ --output inventory.json
 
 Output (stdout or file): JSON object with rasters, sidecars, ignored lists.
-Credentials are read from the environment (AWS profile, env vars, IAM role, STS).
+Public buckets are detected automatically — no flags or credentials required.
+For private buckets, credentials are resolved from the environment (AWS profile, env vars, IAM role).
 """
 
 import argparse
@@ -15,6 +16,9 @@ import sys
 from urllib.parse import urlparse
 
 import boto3
+from botocore import UNSIGNED
+from botocore.config import Config
+from botocore.exceptions import ClientError
 
 RASTER_EXTS = {".tif", ".tiff"}
 SIDECAR_EXTS = {".xml", ".json", ".txt", ".imd", ".rpb", ".ovr", ".aux", ".png"}
@@ -29,12 +33,22 @@ def classify(key: str) -> str:
     return "ignored"
 
 
+def _make_client(bucket: str, prefix: str) -> boto3.client:
+    """Try anonymous access first; fall back to the credential chain for private buckets."""
+    anon = boto3.client("s3", config=Config(signature_version=UNSIGNED))
+    try:
+        anon.list_objects_v2(Bucket=bucket, Prefix=prefix, MaxKeys=1)
+        return anon
+    except ClientError:
+        return boto3.client("s3")
+
+
 def run(s3_uri: str) -> dict:
     parsed = urlparse(s3_uri)
     bucket = parsed.netloc
     prefix = parsed.path.lstrip("/")
 
-    s3 = boto3.client("s3")
+    s3 = _make_client(bucket, prefix)
     paginator = s3.get_paginator("list_objects_v2")
 
     rasters, sidecars, ignored = [], [], []

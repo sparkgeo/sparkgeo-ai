@@ -41,19 +41,27 @@ def _item_base(meta: dict, bands_config: list | None) -> pystac.Item:
 
     extensions = [EXT_PROJ, EXT_RASTER, EXT_FILE]
 
+    # pystac >= 1.10 validates at construction: datetime=None requires string start/end datetimes.
+    # When no date is parseable from the filename we use an open-ended sentinel range so the Item
+    # remains schema-valid; callers can override via temporal_hint in collection-config.yaml.
+    if dt:
+        init_props: dict = {}
+    else:
+        temporal_hint = meta.get("_temporal_hint", {})
+        init_props = {
+            "datetime": None,
+            "start_datetime": temporal_hint.get("start", "0001-01-01T00:00:00Z"),
+            "end_datetime": temporal_hint.get("end", "9999-12-31T23:59:59Z"),
+        }
+
     item = pystac.Item(
         id="",  # caller sets id
         geometry=geom,
         bbox=bbox,
         datetime=dt,
-        properties={},
+        properties=init_props,
         stac_extensions=extensions,
     )
-
-    if not dt:
-        item.properties["datetime"] = None
-        item.properties["start_datetime"] = None
-        item.properties["end_datetime"] = None
 
     if meta.get("crs_epsg"):
         item.properties["proj:code"] = f"EPSG:{meta['crs_epsg']}"
