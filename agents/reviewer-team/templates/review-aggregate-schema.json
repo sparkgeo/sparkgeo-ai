@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "review-aggregate-schema.json",
+  "title": "Aggregated Code Review",
+  "description": "Structured output for the reviewer-aggregator agent — merged, deduplicated findings from all specialist agents.",
+  "type": "object",
+  "required": ["version", "review_type", "agents_invoked", "summary", "comments", "coverage"],
+  "unevaluatedProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "review_type": {
+      "type": "string",
+      "enum": ["pr", "codebase"]
+    },
+    "pr": {
+      "$ref": "#/$defs/prMetadata"
+    },
+    "agents_invoked": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "List of agent codenames that contributed findings"
+    },
+    "summary": {
+      "$ref": "#/$defs/aggregateSummary"
+    },
+    "comments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/aggregateComment"
+      },
+      "description": "All findings, deduplicated and ordered by severity"
+    },
+    "cross_cutting_concerns": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Observations that span multiple agents or files"
+    },
+    "coverage": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/agentCoverage"
+      }
+    }
+  },
+
+  "$defs": {
+
+    "prMetadata": {
+      "type": "object",
+      "unevaluatedProperties": false,
+      "properties": {
+        "title":           { "type": "string" },
+        "description":     { "type": "string" },
+        "base_ref":        { "type": "string" },
+        "head_ref":        { "type": "string" },
+        "commit_sha":      { "type": "string" },
+        "pull_request_id": { "type": "string" }
+      }
+    },
+
+    "aggregateSummary": {
+      "type": "object",
+      "required": ["overall_assessment", "blocking", "counts", "files_reviewed", "files_total"],
+      "unevaluatedProperties": false,
+      "properties": {
+        "overall_assessment": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blocking": {
+          "type": "boolean"
+        },
+        "counts": {
+          "type": "object",
+          "required": ["severe", "warning", "question", "info", "praise"],
+          "unevaluatedProperties": false,
+          "properties": {
+            "severe":   { "type": "integer", "minimum": 0 },
+            "warning":  { "type": "integer", "minimum": 0 },
+            "question": { "type": "integer", "minimum": 0 },
+            "info":     { "type": "integer", "minimum": 0 },
+            "praise":   { "type": "integer", "minimum": 0 }
+          }
+        },
+        "suppressed_as_addressed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of findings suppressed because they matched previously resolved or acknowledged review threads"
+        },
+        "files_reviewed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "files_total": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+
+    "level": {
+      "type": "string",
+      "enum": ["praise", "info", "question", "warning", "severe"]
+    },
+
+    "category": {
+      "type": "string",
+      "enum": [
+        "correctness",
+        "security",
+        "performance",
+        "maintainability",
+        "readability",
+        "style",
+        "test_gap",
+        "docs",
+        "dependency",
+        "api_contract",
+        "concurrency",
+        "error_handling"
+      ]
+    },
+
+    "confidence": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+
+    "location": {
+      "type": "object",
+      "required": ["file_path", "start_line", "end_line"],
+      "unevaluatedProperties": false,
+      "properties": {
+        "file_path":    { "type": "string", "minLength": 1 },
+        "side":         { "type": "string", "enum": ["old", "new"], "default": "new" },
+        "start_line":   { "type": "integer", "minimum": 1 },
+        "end_line":     { "type": "integer", "minimum": 1 },
+        "start_column": { "type": "integer", "minimum": 1 },
+        "end_column":   { "type": "integer", "minimum": 1 },
+        "hunk_header":  { "type": "string" },
+        "symbol":       { "type": "string" }
+      },
+      "dependentRequired": {
+        "start_column": ["end_column"],
+        "end_column": ["start_column"]
+      }
+    },
+
+    "appliesTo": {
+      "type": "object",
+      "unevaluatedProperties": false,
+      "properties": {
+        "file_paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "symbols": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+
+    "aggregateCommentBase": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "level",
+        "category",
+        "confidence",
+        "blocking",
+        "found_by",
+        "summary",
+        "comment"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^CR-[0-9]{3,}$"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["inline_comment", "diff_comment"]
+        },
+        "level":      { "$ref": "#/$defs/level" },
+        "category":   { "$ref": "#/$defs/category" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "blocking":   { "type": "boolean" },
+        "found_by": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "description": "Agent codenames that flagged this finding (post-deduplication)"
+        },
+        "summary":         { "type": "string", "minLength": 1 },
+        "comment":         { "type": "string", "minLength": 1 },
+        "suggestion":      { "type": "string" },
+        "suggestion_consequences": {
+          "type": "string",
+          "description": "Trade-offs, side effects, or risks of following the suggestion. Include when the fix itself could cause issues."
+        },
+        "why_it_matters":  { "type": "string" },
+        "evidence": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "references": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "related_ids": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^CR-[0-9]{3,}$" },
+          "uniqueItems": true
+        }
+      },
+      "if": {
+        "properties": { "level": { "enum": ["warning", "severe"] } },
+        "required": ["level"]
+      },
+      "then": {
+        "required": ["suggestion", "why_it_matters"]
+      }
+    },
+
+    "inlineComment": {
+      "unevaluatedProperties": false,
+      "allOf": [{ "$ref": "#/$defs/aggregateCommentBase" }],
+      "required": ["location"],
+      "properties": {
+        "type":     { "const": "inline_comment" },
+        "location": { "$ref": "#/$defs/location" }
+      }
+    },
+
+    "diffComment": {
+      "unevaluatedProperties": false,
+      "allOf": [{ "$ref": "#/$defs/aggregateCommentBase" }],
+      "properties": {
+        "type":       { "const": "diff_comment" },
+        "applies_to": { "$ref": "#/$defs/appliesTo" }
+      }
+    },
+
+    "aggregateComment": {
+      "oneOf": [
+        { "$ref": "#/$defs/inlineComment" },
+        { "$ref": "#/$defs/diffComment" }
+      ]
+    },
+
+    "agentCoverage": {
+      "type": "object",
+      "required": ["agent", "role", "files_reviewed", "findings", "blocking"],
+      "unevaluatedProperties": false,
+      "properties": {
+        "agent":          { "type": "string", "minLength": 1 },
+        "role":           { "type": "string", "minLength": 1 },
+        "files_reviewed": { "type": "integer", "minimum": 0 },
+        "findings":       { "type": "integer", "minimum": 0 },
+        "blocking":       { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}
