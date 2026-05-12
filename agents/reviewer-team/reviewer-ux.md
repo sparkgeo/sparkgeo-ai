@@ -78,7 +78,7 @@ You will be given a set of files and their diffs from a pull request. Review eac
 - Focus trap in modals
 - Visible focus indicators
 
-### Map Interaction UX (OpenLayers)
+### Map Interaction UX
 - Map controls are accessible and labeled
 - Zoom behavior is smooth and bounded
 - Feature selection provides clear visual and accessible feedback

@@ -53,7 +53,7 @@ You will be given a set of files and their diffs from a pull request. Review eac
 - Route structure and organization
 - Proper navigation (useNavigate, Link)
 
-### OpenLayers Integration
+### Map Library Integration
 - Map lifecycle management (proper cleanup on unmount)
 - Layer management patterns
 - Feature interaction handling

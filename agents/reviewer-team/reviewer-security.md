@@ -19,7 +19,7 @@ You will be given a set of files and their diffs from a pull request. Review eve
 - API keys, passwords, tokens in code (even in comments or test files)
 - Hardcoded connection strings with credentials
 - Private keys or certificates committed
-- .env files with real values in the diff
+- .env or .envrc files with real values in the diff
 - Secrets in CI/CD configs that should use secret management
 
 ### SQL Injection
