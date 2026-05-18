@@ -2,8 +2,8 @@
 """Extract raster metadata from S3 objects via GDAL range requests (no full download).
 
 Usage:
-    python3 inspect.py --inventory inventory.json [--sample 10] [--output metadata.json]
-    python3 inspect.py s3://bucket/key.tif [s3://bucket/key2.tif ...]
+    python3 raster_inspect.py --inventory inventory.json [--sample 10] [--output metadata.json]
+    python3 raster_inspect.py s3://bucket/key.tif [s3://bucket/key2.tif ...]
 
 Requires: boto3, rasterio, rio-cogeo, pyproj, shapely
 Public buckets are detected automatically — no flags or credentials required.
@@ -14,6 +14,7 @@ import argparse
 import json
 import re
 import sys
+import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from urllib.parse import urlparse
@@ -106,6 +107,7 @@ def inspect_one(uri: str, gdal_env: dict) -> dict:
                     "error": None,
                 }
     except Exception as exc:
+        print(f"WARN: inspection failed for {uri}: {exc}\n{traceback.format_exc()}", file=sys.stderr)
         return {"uri": uri, "error": str(exc)}
 
 

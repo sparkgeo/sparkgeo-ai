@@ -2,7 +2,7 @@
 """Build a static STAC Catalog from raster metadata and a collection config.
 
 Usage:
-    python3 build.py --metadata metadata.json --config collection-config.yaml --output ./stac-output
+    python3 build.py --metadata metadata.json --inventory inventory.json --config collection-config.yaml --output ./stac-output
 
 Asset HREFs are set to the original S3 URIs — source data is never moved or copied.
 Requires: pystac, shapely
@@ -13,6 +13,7 @@ import json
 import os
 import re
 import sys
+import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -238,7 +239,7 @@ def build_catalog(metadata: list, config: dict, output_dir: str) -> pystac.Catal
                     bands_config, sidecar_roles_cfg,
                 ))
             except Exception as e:
-                print(f"  Skipping group {prefix}: {e}", file=sys.stderr)
+                print(f"  Skipping group {prefix}: {e}\n{traceback.format_exc()}", file=sys.stderr)
     else:
         items = [build_item(m, size_map, bands_config) for m in valid_meta]
 

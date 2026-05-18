@@ -29,6 +29,8 @@ def content_type(filename: str) -> str:
 
 def publish(local_dir: str, s3_uri: str, dry_run: bool = False) -> list[str]:
     parsed = urlparse(s3_uri)
+    if parsed.scheme != "s3" or not parsed.netloc:
+        raise ValueError(f"Invalid S3 URI: {s3_uri!r} — must be in the form s3://bucket/prefix/")
     bucket = parsed.netloc
     base_key = parsed.path.lstrip("/").rstrip("/") + "/"
 

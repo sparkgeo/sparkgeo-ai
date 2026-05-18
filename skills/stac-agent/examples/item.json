@@ -15,8 +15,7 @@
   "properties": {
     "datetime": "2024-06-12T00:00:00Z",
     "proj:code": "EPSG:32610",
-    "proj:shape": [10000, 10000],
-    "file:size": 52428800
+    "proj:shape": [10000, 10000]
   },
   "assets": {
     "data": {

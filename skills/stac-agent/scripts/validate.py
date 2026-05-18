@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate a STAC catalog with pystac[validate] and a heuristic best-practices check.
+"""Validate a STAC catalog with pystac[validation] and a heuristic best-practices check.
 
 Usage:
     python3 validate.py ./stac-output/
@@ -38,7 +38,8 @@ def heuristic_review(catalog_dir: str) -> list[dict]:
     for path in all_json:
         try:
             obj = load(path)
-        except Exception:
+        except Exception as exc:
+            print(f"WARN: failed to parse {path}: {exc}", file=sys.stderr)
             continue
         rel = str(Path(path).relative_to(catalog_dir))
         t = obj.get("type", "")

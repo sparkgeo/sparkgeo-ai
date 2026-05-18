@@ -2,7 +2,7 @@
 name: stac-agent
 description: Build and validate a static STAC Catalog from GeoTIFF/COG raster files at an S3 location (public or private). Covers inventory, raster inspection, STAC Item/Collection/Catalog creation, validation, and optional publishing. Source data is never moved, copied, or transformed. Trigger phrases- "build STAC from S3", "create catalog from S3", "inventory S3 rasters", "STAC from bucket", "validate STAC catalog".
 compatibility: Requires uv and AWS CLI. Public buckets need no credentials. Private buckets require boto3-resolvable credentials from the environment.
-allowed-tools: Bash(aws sts get-caller-identity) Bash(aws s3 ls *) Bash(aws s3 cp *) Bash(uv venv *) Bash(uv pip *) Bash(.stac-venv/bin/python *) Read Write
+allowed-tools: Bash(aws s3 ls *), Bash(aws s3 cp *), Bash(uv venv *), Bash(uv pip *), Bash(.stac-venv/bin/python *), Read, Write
 ---
 
 # STAC Agent
@@ -64,7 +64,7 @@ Run `scripts/publish.py` only when the user explicitly requests publishing or wh
 Verify the bucket is reachable before installing dependencies:
 
 ```bash
-aws s3 ls <S3_SOURCE> --no-sign-request 2>/dev/null || aws s3 ls <S3_SOURCE> 2>/dev/null || echo "UNREACHABLE"
+aws s3 ls <S3_SOURCE> --no-sign-request 2>/dev/null || aws s3 ls <S3_SOURCE> 2>/dev/null || { echo "UNREACHABLE"; exit 1; }
 ```
 
 If neither command succeeds, **stop immediately** and print:
@@ -149,7 +149,7 @@ bbox, geometry, CRS, proj:code, projection metadata, raster dimensions, bands, d
 4. Provider name and role — Sparkgeo is always added as a `processor` provider; ask for any additional data provider
 
 **Ask only if unresolved:**
-5. Grouping mode — one Item per file, or multiple files per Item
+5. Grouping mode — one-per-file (one Item per file) or group-by-prefix (multiple files per Item, grouped by directory prefix)
 6. Band semantics — only if band count > 1 and no known sensor pattern detected
 7. Temporal hint — only if no dates found in any filenames
 8. Sidecar roles — only if sidecar files exist

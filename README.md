@@ -21,7 +21,7 @@ Copy a skill folder to a location your tool discovers automatically.
 Example — install `stac-agent` globally for Claude Code:
 
 ```sh
-cp -r skills/stac-agent ~/.claude/skills/
+mkdir -p ~/.claude/skills && cp -r skills/stac-agent ~/.claude/skills/
 ```
 
 Global installs apply to all projects. Project-level installs scope to one repo.

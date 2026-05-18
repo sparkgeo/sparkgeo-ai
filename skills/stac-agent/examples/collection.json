@@ -1,7 +1,12 @@
 {
   "type": "Collection",
   "id": "bc-dem-2024",
-  "stac_version": "1.0.0",
+  "stac_version": "1.1.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/projection/v2.0.0/schema.json",
+    "https://stac-extensions.github.io/raster/v2.0.0/schema.json",
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json"
+  ],
   "title": "BC Digital Elevation Model 2024",
   "description": "1-metre resolution digital elevation model tiles derived from airborne LiDAR surveys across British Columbia, Canada. Data is provided as Cloud Optimized GeoTIFFs in UTM Zone 10N (EPSG:32610).",
   "license": "OGL-Canada-2.0",

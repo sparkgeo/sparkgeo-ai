@@ -32,6 +32,7 @@
       "expected_output": "A STAC catalog at ./stac-wyvern where each Item includes the COG as its data asset and any sidecar files as metadata assets with an appropriate role. Band semantics are either inferred from sidecars or clarified with the user. Validation passes.",
       "files": [],
       "assertions": [
+        "The agent runs 'aws s3 ls s3://wyvern-closed-data/original/' (with or without --no-sign-request) before installing dependencies or running inventory.py",
         "Each Item JSON references the .tif asset and any corresponding sidecar assets",
         "Sidecar assets have a role of 'metadata' or similar",
         "COG assets use the media type 'image/tiff; application=geotiff; profile=cloud-optimized'",
@@ -55,13 +56,14 @@
     {
       "id": 4,
       "prompt": "Build a STAC catalog from s3://wyvern-closed-data/original/ — my AWS credentials are not set up yet.",
-      "expected_output": "The agent runs 'aws sts get-caller-identity', detects the failure, prints the exact halt message from the Ground Rules, and stops. No S3 listing, inspection, or catalog building is attempted.",
+      "expected_output": "The agent runs 'aws s3 ls s3://wyvern-closed-data/original/ --no-sign-request' as the Step 0 access check. Both the unsigned and signed attempts fail. The agent prints the Step 0 halt message and stops immediately. No dependency installation, inventory, inspection, or catalog building is attempted.",
       "files": [],
       "assertions": [
-        "The agent calls 'aws sts get-caller-identity' before any other AWS operation",
-        "Execution halts immediately on a non-zero exit from that command",
-        "The halt message tells the user to set AWS_PROFILE, AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, or refresh their SSO session",
-        "No 'aws s3 ls' or inventory.py call is made",
+        "The agent runs 'aws s3 ls s3://wyvern-closed-data/original/ --no-sign-request' as the first AWS operation",
+        "When both the --no-sign-request and signed 'aws s3 ls' attempts fail, execution halts immediately",
+        "The halt message tells the user to verify the URI (public bucket) or configure credentials — AWS_PROFILE, AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, or SSO session (private bucket)",
+        "No 'uv pip install' or dependency installation is run",
+        "No inventory.py call is made",
         "The agent does not attempt to configure credentials itself"
       ]
     }

@@ -15,12 +15,10 @@ collection:
       url: "https://example.com"
 
 # How to group rasters into STAC Items.
-# one-per-file:   each .tif becomes its own Item (default)
+# one-per-file:    each .tif becomes its own Item (default)
 # group-by-prefix: rasters sharing a common path prefix become one multi-asset Item
-# group-by-regex:  use a named capture group to define scene IDs
 grouping:
   mode: one-per-file
-  # regex: "(?P<scene_id>[A-Z0-9_]+)_B\\d+\\.tif"
 
 # Band semantics — only needed for multi-band rasters.
 # Remove or comment out for single-band data.
