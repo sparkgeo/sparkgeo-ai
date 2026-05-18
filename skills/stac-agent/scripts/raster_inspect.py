@@ -3,11 +3,12 @@
 
 Usage:
     python3 raster_inspect.py --inventory inventory.json [--sample 10] [--output metadata.json]
+    python3 raster_inspect.py --inventory inventory.json --profile my-sso-profile --output metadata.json
     python3 raster_inspect.py s3://bucket/key.tif [s3://bucket/key2.tif ...]
 
 Requires: boto3, rasterio, rio-cogeo, pyproj, shapely
 Public buckets are detected automatically — no flags or credentials required.
-For private buckets, credentials are resolved from the environment.
+For private buckets, pass --profile to select an AWS profile (required for SSO profiles).
 """
 
 import argparse
@@ -118,6 +119,7 @@ def main():
     parser.add_argument("--sample", type=int, default=10, help="Max files to inspect (default 10)")
     parser.add_argument("--output", "-o", help="Write JSON to this file instead of stdout")
     parser.add_argument("--workers", type=int, default=5, help="Parallel workers (default 5)")
+    parser.add_argument("--profile", default=None, help="AWS profile name for private buckets (required for SSO profiles)")
     args = parser.parse_args()
 
     if args.inventory:
@@ -130,11 +132,12 @@ def main():
         parser.error("Provide S3 URIs or --inventory")
 
     parsed = urlparse(uris[0])
-    gdal_env = (
-        {**GDAL_ENV, "AWS_NO_SIGN_REQUEST": "YES"}
-        if _is_public(parsed.netloc, parsed.path.lstrip("/"))
-        else GDAL_ENV
-    )
+    if _is_public(parsed.netloc, parsed.path.lstrip("/")):
+        gdal_env = {**GDAL_ENV, "AWS_NO_SIGN_REQUEST": "YES"}
+    elif args.profile:
+        gdal_env = {**GDAL_ENV, "AWS_PROFILE": args.profile}
+    else:
+        gdal_env = GDAL_ENV
 
     results = [None] * len(uris)
     print(f"Inspecting {len(uris)} files...", file=sys.stderr)

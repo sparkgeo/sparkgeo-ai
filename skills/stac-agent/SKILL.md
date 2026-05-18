@@ -1,7 +1,7 @@
 ---
 name: stac-agent
 description: Build and validate a static STAC Catalog from GeoTIFF/COG raster files at an S3 location (public or private). Covers inventory, raster inspection, STAC Item/Collection/Catalog creation, validation, and optional publishing. Source data is never moved, copied, or transformed. Trigger phrases- "build STAC from S3", "create catalog from S3", "inventory S3 rasters", "STAC from bucket", "validate STAC catalog".
-compatibility: Requires uv and AWS CLI. Public buckets need no credentials. Private buckets require boto3-resolvable credentials from the environment.
+compatibility: Requires uv and AWS CLI. On macOS with Homebrew, /opt/homebrew/bin may not be in PATH — the skill resolves aws via `command -v` fallback. Public buckets need no credentials. Private buckets require credentials; pass `--profile <name>` to inventory.py and raster_inspect.py for SSO profiles.
 allowed-tools: Bash(aws s3 ls *), Bash(aws s3 cp *), Bash(uv venv *), Bash(uv pip *), Bash(.stac-venv/bin/python *), Read, Write
 ---
 
@@ -64,16 +64,18 @@ Run `scripts/publish.py` only when the user explicitly requests publishing or wh
 Verify the bucket is reachable before installing dependencies:
 
 ```bash
-aws s3 ls <S3_SOURCE> --no-sign-request 2>/dev/null || aws s3 ls <S3_SOURCE> 2>/dev/null || { echo "UNREACHABLE"; exit 1; }
+# Resolve aws CLI (Homebrew macOS may not have it in PATH)
+AWS=$(command -v aws 2>/dev/null || echo /opt/homebrew/bin/aws)
+$AWS s3 ls <S3_SOURCE> --no-sign-request 2>/dev/null || $AWS s3 ls <S3_SOURCE> 2>/dev/null || { echo "UNREACHABLE"; exit 1; }
 ```
 
 If neither command succeeds, **stop immediately** and print:
 
 > Cannot access `<S3_SOURCE>`.
 > - Public bucket: verify the URI is correct.
-> - Private bucket: configure credentials (AWS_PROFILE, AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, or SSO session), then rerun.
+> - Private bucket: configure credentials (AWS SSO login, AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, or IAM role), then rerun.
 
-The pipeline scripts (`inventory.py`, `raster_inspect.py`) detect public vs. private access automatically — no flags needed.
+The pipeline scripts (`inventory.py`, `raster_inspect.py`) detect public vs. private access automatically. For private buckets accessed via AWS SSO profiles, pass `--profile <name>` to both scripts.
 
 Never run `aws configure`, `aws sso login`, or any credential-setup command. Credential management is the user's responsibility.
 
@@ -100,7 +102,11 @@ Access was confirmed in Step 0. No additional S3 check needed here.
 If `inventory.json` already exists in the working directory, skip this step and use the cached file. Only rerun if the user explicitly requests a fresh inventory or the S3 path has changed. Never call `aws s3 ls` manually to browse the bucket — `inventory.py` handles all S3 listing.
 
 ```bash
+# Public bucket:
 .stac-venv/bin/python scripts/inventory.py <S3_SOURCE> --output inventory.json
+
+# Private bucket (SSO profile):
+.stac-venv/bin/python scripts/inventory.py <S3_SOURCE> --profile <PROFILE> --output inventory.json
 ```
 
 Report raster count, sidecar count, and total size. If no rasters are found, stop and ask the user to confirm the path.
@@ -114,8 +120,14 @@ If `metadata.json` already exists, skip this step and use the cached file. Only 
 Use `--sample 10` for datasets with many rasters. Increase only if the sample reveals mixed CRS, inconsistent band counts, or date-parsing failures across the full set.
 
 ```bash
+# Public bucket:
 .stac-venv/bin/python scripts/raster_inspect.py --inventory inventory.json --sample 10 --output metadata.json
+
+# Private bucket (SSO profile):
+.stac-venv/bin/python scripts/raster_inspect.py --inventory inventory.json --sample 10 --profile <PROFILE> --output metadata.json
 ```
+
+If inspection fails with a `PermanentRedirect` error, set `AWS_DEFAULT_REGION=<bucket-region>` (e.g. `us-east-1`) before re-running.
 
 Summarise what was inferred **before asking any questions**:
 

@@ -4,10 +4,11 @@
 Usage:
     python3 inventory.py s3://bucket/prefix/
     python3 inventory.py s3://bucket/prefix/ --output inventory.json
+    python3 inventory.py s3://bucket/prefix/ --profile my-sso-profile --output inventory.json
 
 Output (stdout or file): JSON object with rasters, sidecars, ignored lists.
 Public buckets are detected automatically — no flags or credentials required.
-For private buckets, credentials are resolved from the environment (AWS profile, env vars, IAM role).
+For private buckets, pass --profile to select an AWS profile (required for SSO profiles).
 """
 
 import argparse
@@ -33,22 +34,22 @@ def classify(key: str) -> str:
     return "ignored"
 
 
-def _make_client(bucket: str, prefix: str) -> boto3.client:
+def _make_client(bucket: str, prefix: str, profile: str | None = None) -> boto3.client:
     """Try anonymous access first; fall back to the credential chain for private buckets."""
     anon = boto3.client("s3", config=Config(signature_version=UNSIGNED))
     try:
         anon.list_objects_v2(Bucket=bucket, Prefix=prefix, MaxKeys=1)
         return anon
     except ClientError:
-        return boto3.client("s3")
+        return boto3.Session(profile_name=profile).client("s3")
 
 
-def run(s3_uri: str) -> dict:
+def run(s3_uri: str, profile: str | None = None) -> dict:
     parsed = urlparse(s3_uri)
     bucket = parsed.netloc
     prefix = parsed.path.lstrip("/")
 
-    s3 = _make_client(bucket, prefix)
+    s3 = _make_client(bucket, prefix, profile)
     paginator = s3.get_paginator("list_objects_v2")
 
     rasters, sidecars, ignored = [], [], []
@@ -84,9 +85,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("s3_uri", help="S3 URI to inventory (e.g. s3://bucket/prefix/)")
     parser.add_argument("--output", "-o", help="Write JSON to this file instead of stdout")
+    parser.add_argument("--profile", default=None, help="AWS profile name for private buckets (required for SSO profiles)")
     args = parser.parse_args()
 
-    result = run(args.s3_uri)
+    result = run(args.s3_uri, args.profile)
 
     mb = result["total_raster_bytes"] / 1e6
     print(f"Rasters:  {len(result['rasters'])} files  ({mb:.1f} MB)", file=sys.stderr)
