@@ -135,7 +135,14 @@ def main():
     if _is_public(parsed.netloc, parsed.path.lstrip("/")):
         gdal_env = {**GDAL_ENV, "AWS_NO_SIGN_REQUEST": "YES"}
     elif args.profile:
-        gdal_env = {**GDAL_ENV, "AWS_PROFILE": args.profile}
+        session = boto3.Session(profile_name=args.profile)
+        creds = session.get_credentials().get_frozen_credentials()
+        gdal_env = {
+            **GDAL_ENV,
+            "AWS_ACCESS_KEY_ID": creds.access_key,
+            "AWS_SECRET_ACCESS_KEY": creds.secret_key,
+            "AWS_SESSION_TOKEN": creds.token,
+        }
     else:
         gdal_env = GDAL_ENV
 

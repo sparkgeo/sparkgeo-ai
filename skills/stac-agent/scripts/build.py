@@ -27,6 +27,13 @@ EXT_RASTER = "https://stac-extensions.github.io/raster/v2.0.0/schema.json"
 EXT_FILE = "https://stac-extensions.github.io/file/v2.1.0/schema.json"
 EXT_EO = "https://stac-extensions.github.io/eo/v2.0.0/schema.json"
 
+SIDECAR_MEDIA_TYPES = {
+    ".aux.xml": "application/xml",
+    ".json": "application/json",
+    ".png": "image/png",
+    ".xml": "application/xml",
+}
+
 
 def clean_id(name: str) -> str:
     name = re.sub(r"\.(tiff?|TIFF?)$", "", name)
@@ -198,9 +205,13 @@ def build_item_group(
             if lower.endswith(ext.lower()):
                 roles = cfg_roles
                 break
+        media_type = next(
+            (mt for ext, mt in SIDECAR_MEDIA_TYPES.items() if lower.endswith(ext)),
+            None,
+        )
         item.add_asset(
             clean_id(fname),
-            pystac.Asset(href=uri, roles=roles, title=fname),
+            pystac.Asset(href=uri, media_type=media_type, roles=roles, title=fname),
         )
 
     return item
@@ -258,6 +269,9 @@ def build_catalog(metadata: list, config: dict, output_dir: str) -> pystac.Catal
         for p in col_cfg.get("providers", [])
     ]
 
+    item_extensions = sorted(set().union(*(set(i.stac_extensions) for i in items)))
+    collection_extensions = [e for e in item_extensions if not (e == EXT_RASTER and not bands_config)]
+
     collection = pystac.Collection(
         id=col_cfg["id"],
         title=col_cfg.get("title"),
@@ -268,8 +282,19 @@ def build_catalog(metadata: list, config: dict, output_dir: str) -> pystac.Catal
             spatial=pystac.SpatialExtent(bboxes=[union_bbox]),
             temporal=pystac.TemporalExtent(intervals=[[t_start, t_end]]),
         ),
-        stac_extensions=[],
+        stac_extensions=collection_extensions,
     )
+    if EXT_EO in item_extensions and bands_config:
+        common_names = sorted({b["common_name"] for b in bands_config if "common_name" in b})
+        center_wls = sorted({b["center_wavelength"] for b in bands_config if "center_wavelength" in b})
+        summaries: dict = {}
+        if common_names:
+            summaries["eo:common_name"] = common_names
+        if center_wls:
+            summaries["eo:center_wavelength"] = center_wls
+        if summaries:
+            collection.summaries = pystac.Summaries(summaries)
+
     for item in items:
         collection.add_item(item)
 
