@@ -1,0 +1,329 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "review-schema.json",
+  "title": "AI Code Review Output",
+  "description": "Structured output format for AI code review agent findings. Each specialist agent produces one document conforming to this schema.",
+  "type": "object",
+  "required": ["version", "agent", "summary", "comments"],
+  "unevaluatedProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "agent": {
+      "$ref": "#/$defs/agentIdentity"
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
+    "comments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/comment"
+      }
+    },
+    "source_context": {
+      "$ref": "#/$defs/sourceContext"
+    }
+  },
+
+  "$defs": {
+
+    "agentIdentity": {
+      "type": "object",
+      "required": ["name", "role"],
+      "unevaluatedProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "reviewer-frontend",
+            "reviewer-ui",
+            "reviewer-ux",
+            "reviewer-backend-python",
+            "reviewer-python-quality",
+            "reviewer-tests",
+            "reviewer-devops",
+            "reviewer-security",
+            "reviewer-database",
+            "reviewer-docs",
+            "reviewer-general-purpose",
+            "reviewer-aggregator"
+          ],
+          "description": "Agent codename"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "frontend",
+            "ui_design",
+            "ux_accessibility",
+            "backend",
+            "code_quality",
+            "testing",
+            "infrastructure",
+            "security",
+            "database",
+            "documentation",
+            "general",
+            "aggregator"
+          ],
+          "description": "Functional role of the agent"
+        }
+      }
+    },
+
+    "summary": {
+      "type": "object",
+      "required": ["overall_assessment", "blocking", "counts"],
+      "unevaluatedProperties": false,
+      "properties": {
+        "overall_assessment": {
+          "type": "string",
+          "minLength": 1,
+          "description": "1-2 sentence summary of the review findings"
+        },
+        "blocking": {
+          "type": "boolean",
+          "description": "true if any finding is severe and blocking"
+        },
+        "counts": {
+          "type": "object",
+          "required": ["severe", "warning", "question", "info", "praise"],
+          "unevaluatedProperties": false,
+          "properties": {
+            "severe":   { "type": "integer", "minimum": 0 },
+            "warning":  { "type": "integer", "minimum": 0 },
+            "question": { "type": "integer", "minimum": 0 },
+            "info":     { "type": "integer", "minimum": 0 },
+            "praise":   { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+
+    "sourceContext": {
+      "type": "object",
+      "unevaluatedProperties": false,
+      "properties": {
+        "commit_sha":       { "type": "string" },
+        "pull_request_id":  { "type": "string" },
+        "diff_identifier":  { "type": "string" }
+      }
+    },
+
+    "level": {
+      "type": "string",
+      "enum": ["praise", "info", "question", "warning", "severe"],
+      "description": "Severity from least to most critical: praise → info → question → warning → severe"
+    },
+
+    "category": {
+      "type": "string",
+      "enum": [
+        "correctness",
+        "security",
+        "performance",
+        "maintainability",
+        "readability",
+        "style",
+        "test_gap",
+        "docs",
+        "dependency",
+        "api_contract",
+        "concurrency",
+        "error_handling"
+      ]
+    },
+
+    "confidence": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+
+    "location": {
+      "type": "object",
+      "required": ["file_path", "start_line", "end_line"],
+      "unevaluatedProperties": false,
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Relative path from repo root (e.g. src/auth/validate.ts)"
+        },
+        "side": {
+          "type": "string",
+          "enum": ["old", "new"],
+          "default": "new",
+          "description": "Which side of the diff: 'new' for additions/current, 'old' for deletions/previous"
+        },
+        "start_line": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "First line of the relevant range"
+        },
+        "end_line": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Last line of the relevant range (same as start_line for single-line findings)"
+        },
+        "start_column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "end_column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "hunk_header": {
+          "type": "string",
+          "description": "The @@ hunk header from the diff, if applicable"
+        },
+        "symbol": {
+          "type": "string",
+          "description": "Function, class, or variable name for IDE symbol search"
+        }
+      },
+      "dependentRequired": {
+        "start_column": ["end_column"],
+        "end_column": ["start_column"]
+      }
+    },
+
+    "appliesTo": {
+      "type": "object",
+      "unevaluatedProperties": false,
+      "properties": {
+        "file_paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "description": "Files this finding spans or relates to"
+        },
+        "symbols": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "description": "Function/class/variable names involved"
+        }
+      }
+    },
+
+    "commentBase": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "level",
+        "category",
+        "confidence",
+        "blocking",
+        "summary",
+        "comment"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^CR-[0-9]{3,}$",
+          "description": "Sequential ID unique within this review (CR-001, CR-002, ...)"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["inline_comment", "diff_comment"]
+        },
+        "level":      { "$ref": "#/$defs/level" },
+        "category":   { "$ref": "#/$defs/category" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "blocking": {
+          "type": "boolean",
+          "description": "true only for severe findings that must be fixed before merge"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Short title of the finding (< 120 chars)"
+        },
+        "comment": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Detailed explanation of the finding"
+        },
+        "suggestion": {
+          "type": "string",
+          "description": "Actionable fix or improvement. Required for warning/severe level."
+        },
+        "suggestion_consequences": {
+          "type": "string",
+          "description": "Trade-offs, side effects, or risks of following the suggestion. Include when the fix itself could cause issues (e.g., table locks, breaking API callers, performance trade-offs)."
+        },
+        "why_it_matters": {
+          "type": "string",
+          "description": "Impact if not addressed. Required for warning/severe level."
+        },
+        "evidence": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Supporting code quotes or contextual evidence"
+        },
+        "references": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "CWE IDs, OWASP references, documentation URLs, or other supporting links"
+        },
+        "related_ids": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^CR-[0-9]{3,}$" },
+          "uniqueItems": true,
+          "description": "IDs of related findings in this review or other agent reviews"
+        },
+        "dedupe_key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable key for cross-agent deduplication. Format: category|issue_slug|file_path|symbol|line_range"
+        }
+      },
+      "if": {
+        "properties": {
+          "level": { "enum": ["warning", "severe"] }
+        },
+        "required": ["level"]
+      },
+      "then": {
+        "required": ["suggestion", "why_it_matters"]
+      }
+    },
+
+    "inlineComment": {
+      "description": "A finding tied to a specific file and line range — enables IDE navigation",
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/commentBase" }
+      ],
+      "required": ["location"],
+      "properties": {
+        "type": { "const": "inline_comment" },
+        "location": { "$ref": "#/$defs/location" }
+      }
+    },
+
+    "diffComment": {
+      "description": "A finding that applies to the overall diff, multiple files, or cross-cutting concerns",
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/commentBase" }
+      ],
+      "properties": {
+        "type": { "const": "diff_comment" },
+        "applies_to": { "$ref": "#/$defs/appliesTo" }
+      }
+    },
+
+    "comment": {
+      "oneOf": [
+        { "$ref": "#/$defs/inlineComment" },
+        { "$ref": "#/$defs/diffComment" }
+      ]
+    }
+  }
+}

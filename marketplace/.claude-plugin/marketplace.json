@@ -1,0 +1,19 @@
+{
+  "name": "sparkgeo-marketplace",
+  "owner": {
+    "name": "Sparkgeo",
+    "email": "hi@sparkgeo.com"
+  },
+  "plugins": [
+    {
+      "name": "reviewer-team",
+      "source": "./plugins/reviewer-team",
+      "description": "A team of reviewer agents to review GitHub pull requests.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Dustin Sampson"
+      }
+    }
+    
+  ]
+}
