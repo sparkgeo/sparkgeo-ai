@@ -27,7 +27,7 @@ Before adding or substantially changing an agent, skill, rule, or workflow:
 
 ### Getting your PR reviewed
 
-The repo operates on a community model — assume that no one is actively monitoring for new contributions. If you'd like feedback on your PR, reach out directly to a relevant team lead or domain expert. For general submissions without an obvious owner, mention [@yeelauren](https://github.com/yeelauren) or [@jbants](https://github.com/jbants) to route it for triage.
+The repo operates on a community model — assume that no one is actively monitoring for new contributions. If you'd like feedback on your PR, request a review from a relevant team lead or domain expert. For general submissions without an obvious owner, request a review from [@yeelauren](https://github.com/yeelauren) or [@jbants](https://github.com/jbants) to route it for triage.
 
 ## Creating a basic skill
 
