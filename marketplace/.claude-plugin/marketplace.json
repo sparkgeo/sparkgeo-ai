@@ -13,7 +13,15 @@
       "author": {
         "name": "Dustin Sampson"
       }
+    },
+    {
+      "name": "sg-pr-writer",
+      "source": "./plugins/sg-pr-writer",
+      "description": "Create GitHub pull requests from the active branch using the gh CLI, following Sparkgeo's PR title and description templates.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Dustin Sampson"
+      }
     }
-    
   ]
 }
