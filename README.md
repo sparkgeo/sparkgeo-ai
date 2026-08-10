@@ -1,6 +1,6 @@
 # Sparkgeo AI
 
-A shared repository of reusable AI skills, agent prompts, rules, and workflows for common tasks across Sparkgeo. Use it in Cursor or Claude Code. The goal is to make AI usage more consistent, higher quality, and easier to reuse across teams.
+A shared repository of reusable AI skills, agent prompts, rules, and workflows for common tasks across Sparkgeo. Use it in Cursor, Claude Code, or any AI tool that supports skills and rules. The goal is to make AI usage more consistent, higher quality, and easier to reuse across teams. Skills follow the [agentskills.io](https://agentskills.io) spec.
 
 ## What lives here
 
@@ -14,6 +14,17 @@ A shared repository of reusable AI skills, agent prompts, rules, and workflows f
 1. Add workflows inside the project repo (often `.cursor/` or `.claude/`), or in your editor’s user-level skills or rules folder so they apply globally.
 2. Prefer small, composable pieces: one agent per file and focused rules.
 3. When adding or improving workflows, open a pull request and request review from at least one AI working group member.
+
+## Installing skills
+
+Copy a skill folder to a location your tool discovers automatically.
+Example — install `stac-agent` globally for Claude Code:
+
+```sh
+mkdir -p ~/.claude/skills && cp -r skills/stac-agent ~/.claude/skills/
+```
+
+Global installs apply to all projects. Project-level installs scope to one repo.
 
 ## Contributing
 
@@ -30,6 +41,8 @@ Before adding or substantially changing an agent, skill, rule, or workflow:
 The repo operates on a community model — assume that no one is actively monitoring for new contributions. If you'd like feedback on your PR, request a review from a relevant team lead or domain expert. For general submissions without an obvious owner, request a review from [@yeelauren](https://github.com/yeelauren) or [@jbants](https://github.com/jbants) to route it for triage.
 
 ## Creating a basic skill
+
+Follow the [agentskills.io skill creation guide](https://agentskills.io/skill-creation/) for the full spec. The template below is a minimal starting point.
 
 Add a folder with a `SKILL.md` file containing instructions. Example structure:
 

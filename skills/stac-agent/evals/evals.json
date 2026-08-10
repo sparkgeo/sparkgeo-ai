@@ -1,0 +1,71 @@
+{
+  "skill_name": "stac-agent",
+  "notes": "Evals use two real S3 buckets: 'spk-public-data' (public read, no credentials required) and 'wyvern-closed-data' (private, valid AWS credentials required).",
+  "buckets": {
+    "public": "s3://spk-public-data/eo-tests/",
+    "private": "s3://wyvern-closed-data/original/"
+  },
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Build a STAC catalog from s3://spk-public-data/eo-tests/ and write it to ./stac-output. The collection is called 'EO Test Dataset', licensed under CC-BY-4.0, provided by Sparkgeo.",
+      "expected_output": "A local STAC catalog at ./stac-output containing catalog.json, a collection directory with collection.json, and one Item JSON per GeoTIFF. All asset HREFs point to the original s3:// URIs. Validation passes with exit code 0.",
+      "files": [],
+      "assertions": [
+        "catalog.json exists in the output directory",
+        "collection.json exists under the collection subdirectory",
+        "The number of Item JSON files equals the number of GeoTIFFs in s3://spk-public-data/eo-tests/",
+        "All asset HREFs in Item files begin with s3://",
+        "No raster data files exist in the output directory (only .json files)",
+        "catalog.json contains stac_version: 1.1.0",
+        "collection.json contains the title 'EO Test Dataset'",
+        "collection.json contains license: cc-by-4.0",
+        "Each Item includes the Projection extension schema URL",
+        "Each Item includes the Raster extension schema URL",
+        "Each Item includes the File extension schema URL",
+        "validate.py exits with code 0 on the output directory"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I've got a bunch of COGs at s3://wyvern-closed-data/original/ — each TIFF may have a matching sidecar with acquisition metadata. Can you build a STAC catalog from them? Output to ./stac-wyvern.",
+      "expected_output": "A STAC catalog at ./stac-wyvern where each Item includes the COG as its data asset and any sidecar files as metadata assets with an appropriate role. Band semantics are either inferred from sidecars or clarified with the user. Validation passes.",
+      "files": [],
+      "assertions": [
+        "The agent runs 'aws s3 ls s3://wyvern-closed-data/original/' (with or without --no-sign-request) before installing dependencies or running inventory.py",
+        "Each Item JSON references the .tif asset and any corresponding sidecar assets",
+        "Sidecar assets have a role of 'metadata' or similar",
+        "COG assets use the media type 'image/tiff; application=geotiff; profile=cloud-optimized'",
+        "All asset HREFs begin with s3://",
+        "validate.py exits with code 0 on the output directory",
+        "collection.json declares the same STAC extensions as its items"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Validate the STAC catalog I already built at ./existing-stac-output.",
+      "expected_output": "The agent runs validate.py against the given path and reports clearly whether validation passed or failed. If it fails, specific errors are listed. No new catalog is built and no S3 inventory or inspection steps are run.",
+      "files": [],
+      "assertions": [
+        "validate.py is invoked against ./existing-stac-output",
+        "Neither inventory.py nor raster_inspect.py is called",
+        "A clear pass or fail result is reported to the user",
+        "If validation fails, specific error messages from pystac are surfaced"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Build a STAC catalog from s3://wyvern-closed-data/original/ — my AWS credentials are not set up yet.",
+      "expected_output": "The agent runs 'aws s3 ls s3://wyvern-closed-data/original/ --no-sign-request' as the Step 0 access check. Both the unsigned and signed attempts fail. The agent prints the Step 0 halt message and stops immediately. No dependency installation, inventory, inspection, or catalog building is attempted.",
+      "files": [],
+      "assertions": [
+        "The agent runs 'aws s3 ls s3://wyvern-closed-data/original/ --no-sign-request' as the first AWS operation",
+        "When both the --no-sign-request and signed 'aws s3 ls' attempts fail, execution halts immediately",
+        "The halt message tells the user to verify the URI (public bucket) or configure credentials — AWS_PROFILE, AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, or SSO session (private bucket)",
+        "No 'uv pip install' or dependency installation is run",
+        "No inventory.py call is made",
+        "The agent does not attempt to configure credentials itself"
+      ]
+    }
+  ]
+}
