@@ -6,14 +6,13 @@
   },
   "plugins": [
     {
-      "name": "reviewer-team",
-      "source": "./plugins/reviewer-team",
-      "description": "A team of reviewer agents to review GitHub pull requests.",
-      "version": "1.0.0",
+      "name": "github",
+      "source": "./plugins/github",
+      "description": "Sparkgeo GitHub workflows: a team of reviewer agents for pull request reviews, and a skill to create GitHub pull requests from the active branch.",
+      "version": "2.0.0",
       "author": {
         "name": "Dustin Sampson"
       }
     }
-    
   ]
 }

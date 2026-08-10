@@ -1,8 +1,0 @@
-{
-  "name": "github-code-review",
-  "description": "A team of reviewer agents to review GitHub pull requests.",
-  "version": "1.0.0",
-  "author": {
-    "name": "Dustin Sampson"
-  }
-}
