@@ -8,12 +8,31 @@ A shared repository of reusable AI skills, agent prompts, rules, and workflows f
 - **[skills/](skills/)**: Reusable skills and step-by-step instructions or checklists for repeatable tasks.
 - **[rules/](rules/)**: Baseline rules loaded into AI sessions (coding standards, git habits, org preferences).
 - **[mcp/](mcp/)**: Notes, configs, or pointers related to Model Context Protocol servers used at Sparkgeo.
+- **[marketplace/](marketplace/)**: Claude Code plugins, packaged for install. See the [github plugin README](marketplace/plugins/github/README.md) for how to add the marketplace and install plugins.
 
-## Using this repo
+## Installing
 
-1. Add workflows inside the project repo (often `.cursor/` or `.claude/`), or in your editor’s user-level skills or rules folder so they apply globally.
-2. Prefer small, composable pieces: one agent per file and focused rules.
-3. When adding or improving workflows, open a pull request and request review from at least one AI working group member.
+Clone the repo, then copy or symlink the pieces you want into place. Use `~/.claude/` (or `~/.cursor/`) to make them available everywhere, or the project's `.claude/` (or `.cursor/`) to scope them to one repo.
+
+```bash
+git clone git@github.com:sparkgeo/sparkgeo-ai.git
+cd sparkgeo-ai
+
+# everywhere, for you
+ln -s "$PWD"/skills/*  ~/.claude/skills/
+ln -s "$PWD"/agents/*  ~/.claude/agents/
+
+# or just one project
+cp -r skills/some-skill /path/to/project/.claude/skills/
+```
+
+Symlinking means a `git pull` updates them in place. Copying means you can edit them locally without touching this repo.
+
+Rules in [rules/](rules/) aren't auto-loaded — paste the parts you want into the project's `CLAUDE.md` (or `.cursor/rules/`).
+
+Plugins under [marketplace/](marketplace/) install through Claude Code's `/plugin` command instead of being copied — see the [github plugin README](marketplace/plugins/github/README.md).
+
+Prefer small, composable pieces: one agent per file, focused rules.
 
 ## Contributing
 
