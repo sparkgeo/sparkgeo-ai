@@ -18,3 +18,8 @@
 **User**: The sg-fast-api agent was updated and should fall under a bigger python plugin; update config, agents, and readmes.
 
 **Summary**: Renamed the fastapi plugin to python (directory was already moved to `plugins/python` with the agent renamed to `spk-fast-api`). Updated the plugin manifest and marketplace manifest with the python plugin name, source, and a broader description, and updated the README plugin table to match.
+
+### Prompt 3
+**User**: The github plugin doesn't show up in Claude.
+
+**Summary**: The sparkgeo marketplace was never registered in Claude Code (`~/.claude/plugins/known_marketplaces.json` had no entry for it), so its plugins could not appear in `/plugin`. Registered the local repo with `claude plugin marketplace add /home/dustin/projects/sparkgeo-ai` and verified `sparkgeo-marketplace` now appears in the configured marketplace list.
