@@ -2,6 +2,24 @@
 
 A Claude Code plugin marketplace for Sparkgeo. It holds reusable skills, agents, and commands, packaged as plugins that you install from one place. The goal is to make AI usage more consistent, higher quality, and easier to reuse across teams.
 
+## Before you start
+
+This repository is private. Claude Code installs a marketplace by cloning it with `git`, so your machine needs credentials that can read a private Sparkgeo repository. If `git` cannot authenticate, `/plugin marketplace add` fails with an authentication or "repository not found" error.
+
+Check your access first:
+
+```
+git ls-remote https://github.com/sparkgeo/sparkgeo-ai.git
+```
+
+If that fails, set up one of the following:
+
+- **GitHub CLI** (easiest): run `gh auth login`, then `gh auth setup-git` to use it as the git credential helper.
+- **SSH key**: add a key to your GitHub account and confirm it with `ssh -T git@github.com`. Then add the marketplace by SSH URL instead: `/plugin marketplace add git@github.com:sparkgeo/sparkgeo-ai.git`.
+- **Personal access token**: create a token with `repo` scope and store it in a git credential helper.
+
+You also need membership of the `sparkgeo` GitHub organisation. Ask a team lead if you do not have it.
+
 ## Install the marketplace
 
 In Claude Code, add the marketplace:
