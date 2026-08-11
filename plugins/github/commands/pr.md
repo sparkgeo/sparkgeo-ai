@@ -6,7 +6,7 @@ Review a GitHub Pull Request using the multi-agent code review pipeline and post
 
 The command supports three modes, dispatched on `$ARGUMENTS`:
 
-1. **Check GitHub CLI auth**: Run `${CLAUDE_PLUGIN_ROOT}/bin/github-checks.sh` (with no arguments). If exit code is non-zero, report stderr to the user and **stop**.
+1. **Check GitHub CLI auth**: Run `${CLAUDE_PLUGIN_ROOT}/scripts/github-checks.sh` (with no arguments). If exit code is non-zero, report stderr to the user and **stop**.
 
 2. **Determine mode** based on `$ARGUMENTS`. After this step you must have two values fixed for the rest of the run:
    - `<number>` — the PR number to review.
