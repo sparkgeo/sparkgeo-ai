@@ -13,3 +13,8 @@
 **User**: Restructure the repo so it works as a single Claude marketplace; move any skills not already in the marketplace into it.
 
 **Summary**: Promoted the marketplace to the repo root. Moved `marketplace/.claude-plugin/marketplace.json` to `.claude-plugin/marketplace.json` and `marketplace/plugins/github` to `plugins/github`. Packaged the loose content as new plugins: `plugins/docs` (plain-docs skill) and `plugins/fastapi` (sg-fast-api agent), each with a `.claude-plugin/plugin.json` manifest, and registered both in the marketplace manifest. Removed the empty `skills/`, `agents/`, and `mcp/` placeholder directories, kept `rules/`, and rewrote the README to document the marketplace layout, install steps, and contribution flow.
+
+### Prompt 2
+**User**: The sg-fast-api agent was updated and should fall under a bigger python plugin; update config, agents, and readmes.
+
+**Summary**: Renamed the fastapi plugin to python (directory was already moved to `plugins/python` with the agent renamed to `spk-fast-api`). Updated the plugin manifest and marketplace manifest with the python plugin name, source, and a broader description, and updated the README plugin table to match.

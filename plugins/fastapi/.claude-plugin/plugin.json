@@ -1,8 +1,0 @@
-{
-  "name": "fastapi",
-  "description": "Sparkgeo FastAPI development: the sg-fast-api agent for designing, building, and reviewing production-ready FastAPI applications.",
-  "version": "1.0.0",
-  "author": {
-    "name": "Dustin Sampson"
-  }
-}

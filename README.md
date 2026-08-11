@@ -28,7 +28,7 @@ Or install a specific plugin directly:
 |---|---|
 | [github](plugins/github/) | A team of reviewer agents for pull request reviews, and a `/pr` command with a skill to create GitHub pull requests from the active branch. |
 | [docs](plugins/docs/) | The `plain-docs` skill: a house style for technical documentation, derived from ASD-STE100 Simplified Technical English. |
-| [fastapi](plugins/fastapi/) | The `sg-fast-api` agent for designing, building, and reviewing production-ready FastAPI applications. |
+| [python](plugins/python/) | Agents for Python development, starting with the `spk-fast-api` agent for designing, building, and reviewing production-ready FastAPI applications. |
 
 ## Repository layout
 
