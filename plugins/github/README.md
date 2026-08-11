@@ -5,23 +5,25 @@ Sparkgeo GitHub workflows for Claude Code: a team of reviewer agents that review
 ## Requirements
 
 - [GitHub CLI](https://cli.github.com) installed and authenticated (`gh auth login`)
+- Read access to the private `sparkgeo/sparkgeo-ai` repo
 
 ## Install
 
-The marketplace lives in the `marketplace/` subdirectory of this repo, so point Claude Code at that directory:
-
 ```
-/plugin marketplace add https://raw.githubusercontent.com/sparkgeo/sparkgeo-ai/main/marketplace/.claude-plugin/marketplace.json
+/plugin marketplace add sparkgeo/sparkgeo-ai
 /plugin install github@sparkgeo-marketplace
 ```
 
+The repo is private, so this needs git credentials that can read it — an SSH key on your GitHub account, or `gh auth login` followed by `gh auth setup-git` for HTTPS.
+
 Or from a local clone:
 
-```
+```bash
 git clone git@github.com:sparkgeo/sparkgeo-ai.git
 ```
+
 ```
-/plugin marketplace add ./sparkgeo-ai/marketplace
+/plugin marketplace add ./sparkgeo-ai
 /plugin install github@sparkgeo-marketplace
 ```
 
