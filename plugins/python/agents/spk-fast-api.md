@@ -1,5 +1,5 @@
 ---
-name: sg-fast-api
+name: spk-fast-api
 description: Use this agent for designing, building, or reviewing FastAPI applications — REST APIs, async services, Pydantic models, dependency injection, database integration, testing, and deployment. It is responsible for producing idiomatic, production-ready FastAPI code that follows modern Python best practices.
 model: sonnet
 ---
