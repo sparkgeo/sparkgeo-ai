@@ -1,5 +1,5 @@
 ---
-name: reviewer-aggregator
+name: spk-reviewer-aggregator
 description: "Aggregates findings from all specialist review agents, deduplicates, prioritizes by severity, and produces a single structured final review."
 model: sonnet
 tools: Read, Glob, Grep, Bash
@@ -84,7 +84,7 @@ Return a single JSON code block conforming to `${CLAUDE_PLUGIN_ROOT}/templates/r
     "commit_sha": "abc123",
     "pull_request_id": "42"
   },
-  "agents_invoked": ["reviewer-security", "reviewer-backend-python", "reviewer-python-quality"],
+  "agents_invoked": ["spk-reviewer-security", "spk-reviewer-backend-python", "spk-reviewer-python-quality"],
   "summary": {
     "overall_assessment": "1-3 sentence synthesis of the review",
     "blocking": true,
@@ -101,7 +101,7 @@ Return a single JSON code block conforming to `${CLAUDE_PLUGIN_ROOT}/templates/r
       "category": "security",
       "confidence": "high",
       "blocking": true,
-      "found_by": ["reviewer-security", "reviewer-backend-python"],
+      "found_by": ["spk-reviewer-security", "spk-reviewer-backend-python"],
       "summary": "SQL injection via string interpolation",
       "comment": "Detailed merged explanation from all agents that flagged this",
       "suggestion": "Use parameterized queries",
@@ -121,7 +121,7 @@ Return a single JSON code block conforming to `${CLAUDE_PLUGIN_ROOT}/templates/r
   ],
   "coverage": [
     {
-      "agent": "reviewer-security",
+      "agent": "spk-reviewer-security",
       "role": "security",
       "files_reviewed": 12,
       "findings": 3,

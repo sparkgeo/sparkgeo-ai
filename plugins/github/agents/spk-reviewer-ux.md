@@ -1,5 +1,5 @@
 ---
-name: reviewer-ux
+name: spk-reviewer-ux
 description: "Reviews UX patterns including accessibility (a11y), usability, responsive design, loading/error states, keyboard navigation, and user interaction flows."
 model: opus
 tools: Read, Glob, Grep, Bash
@@ -98,5 +98,5 @@ If your review finds no meaningful issues, that is a valid and valuable outcome.
 
 Read `${CLAUDE_PLUGIN_ROOT}/templates/review-output-format.md` for the structured JSON output schema, field reference, and examples.
 
-- **agent.name**: `reviewer-ux`
+- **agent.name**: `spk-reviewer-ux`
 - **agent.role**: `ux_accessibility`

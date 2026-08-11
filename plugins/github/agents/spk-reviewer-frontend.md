@@ -1,5 +1,5 @@
 ---
-name: reviewer-frontend
+name: spk-reviewer-frontend
 description: "Reviews frontend code changes in TypeScript, TSX, CSS, Vite config, and ESLint configs. Covers React components, hooks, Mantine usage, Tanstack Query, OpenLayers, and routing patterns."
 model: sonnet
 tools: Read, Glob, Grep, Bash
@@ -71,5 +71,5 @@ If your review finds no meaningful issues, that is a valid and valuable outcome.
 
 Read `${CLAUDE_PLUGIN_ROOT}/templates/review-output-format.md` for the structured JSON output schema, field reference, and examples.
 
-- **agent.name**: `reviewer-frontend`
+- **agent.name**: `spk-reviewer-frontend`
 - **agent.role**: `frontend`

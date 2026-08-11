@@ -1,5 +1,5 @@
 ---
-name: reviewer-python-quality
+name: spk-reviewer-python-quality
 description: "Reviews Python code for style compliance including Ruff rules, type annotations, import ordering, and docstring quality."
 model: haiku
 tools: Read, Glob, Grep, Bash
@@ -55,5 +55,5 @@ If your review finds no meaningful issues, that is a valid and valuable outcome.
 
 Read `${CLAUDE_PLUGIN_ROOT}/templates/review-output-format.md` for the structured JSON output schema, field reference, and examples.
 
-- **agent.name**: `reviewer-python-quality`
+- **agent.name**: `spk-reviewer-python-quality`
 - **agent.role**: `code_quality`

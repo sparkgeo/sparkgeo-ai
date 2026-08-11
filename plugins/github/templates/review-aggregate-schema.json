@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "review-aggregate-schema.json",
   "title": "Aggregated Code Review",
-  "description": "Structured output for the reviewer-aggregator agent — merged, deduplicated findings from all specialist agents.",
+  "description": "Structured output for the spk-reviewer-aggregator agent — merged, deduplicated findings from all specialist agents.",
   "type": "object",
   "required": ["version", "agents_invoked", "summary", "comments", "coverage"],
   "unevaluatedProperties": false,

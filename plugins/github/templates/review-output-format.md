@@ -1,6 +1,6 @@
 # Structured Review Output Format
 
-This document defines the structured JSON output format that all review agents must follow when reporting findings. It ensures consistent, machine-parseable output that the `reviewer-aggregator` agent can aggregate and that developers can navigate in their IDE.
+This document defines the structured JSON output format that all review agents must follow when reporting findings. It ensures consistent, machine-parseable output that the `spk-reviewer-aggregator` agent can aggregate and that developers can navigate in their IDE.
 
 The canonical JSON Schema is at `${CLAUDE_PLUGIN_ROOT}/templates/review-schema.json`.
 
@@ -36,18 +36,18 @@ Each agent uses its assigned name and role:
 
 | Codename                     | Role              |
 |------------------------------|-------------------|
-| reviewer-frontend            | frontend          |
-| reviewer-ui                  | ui_design         |
-| reviewer-ux                  | ux_accessibility  |
-| reviewer-backend-python      | backend           |
-| reviewer-python-quality      | code_quality      |
-| reviewer-tests               | testing           |
-| reviewer-devops              | infrastructure    |
-| reviewer-security            | security          |
-| reviewer-database            | database          |
-| reviewer-docs                | documentation     |
-| reviewer-general-purpose     | general           |
-| reviewer-aggregator          | aggregator        |
+| spk-reviewer-frontend            | frontend          |
+| spk-reviewer-ui                  | ui_design         |
+| spk-reviewer-ux                  | ux_accessibility  |
+| spk-reviewer-backend-python      | backend           |
+| spk-reviewer-python-quality      | code_quality      |
+| spk-reviewer-tests               | testing           |
+| spk-reviewer-devops              | infrastructure    |
+| spk-reviewer-security            | security          |
+| spk-reviewer-database            | database          |
+| spk-reviewer-docs                | documentation     |
+| spk-reviewer-general-purpose     | general           |
+| spk-reviewer-aggregator          | aggregator        |
 
 ## Comment Types
 

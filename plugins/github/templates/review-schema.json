@@ -38,18 +38,18 @@
         "name": {
           "type": "string",
           "enum": [
-            "reviewer-frontend",
-            "reviewer-ui",
-            "reviewer-ux",
-            "reviewer-backend-python",
-            "reviewer-python-quality",
-            "reviewer-tests",
-            "reviewer-devops",
-            "reviewer-security",
-            "reviewer-database",
-            "reviewer-docs",
-            "reviewer-general-purpose",
-            "reviewer-aggregator"
+            "spk-reviewer-frontend",
+            "spk-reviewer-ui",
+            "spk-reviewer-ux",
+            "spk-reviewer-backend-python",
+            "spk-reviewer-python-quality",
+            "spk-reviewer-tests",
+            "spk-reviewer-devops",
+            "spk-reviewer-security",
+            "spk-reviewer-database",
+            "spk-reviewer-docs",
+            "spk-reviewer-general-purpose",
+            "spk-reviewer-aggregator"
           ],
           "description": "Agent codename"
         },

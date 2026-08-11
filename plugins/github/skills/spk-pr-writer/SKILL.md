@@ -1,5 +1,5 @@
 ---
-name: sg-pr-writer
+name: spk-pr-writer
 description: Create a GitHub pull request from the currently active branch using the GitHub CLI (gh), with a standardized title and description. Use when the user wants to open, create, or write a pull request.
 ---
 

@@ -102,7 +102,7 @@ Run these commands in parallel (always include `<repo_flag>` so they work from a
 
 10. **Filter excluded files**: Remove any files matched by `.gitignore` or `.dockerignore` from the changed file list before dispatching. **Skip this step in Mode B (PR URL)** — the local working tree is not available, so these files cannot be read. Note the skip in the final report.
 
-11. **Dispatch**: Use the Agent tool to launch the dispatch agent (subagent_type: `reviewer-dispatch`) with the full diff and changed file list. This agent analyzes the diff and creates a dispatch plan identifying which specialist agents to invoke.
+11. **Dispatch**: Use the Agent tool to launch the dispatch agent (subagent_type: `spk-reviewer-dispatch`) with the full diff and changed file list. This agent analyzes the diff and creates a dispatch plan identifying which specialist agents to invoke.
 
 12. **Run specialist agents in parallel**: Based on the dispatch plan, launch the appropriate specialist review agents in parallel using the Agent tool. Each agent receives:
    - The subset of files assigned to it
@@ -112,21 +112,21 @@ Run these commands in parallel (always include `<repo_flag>` so they work from a
    - Instruction to output structured JSON conforming to `${CLAUDE_PLUGIN_ROOT}/templates/review-schema.json`
 
    Use these agent definitions from `${CLAUDE_PLUGIN_ROOT}/agents/`:
-   - **reviewer-security** — ALWAYS run this, for all files
-   - **reviewer-frontend** — for .ts, .tsx, .css, vite/eslint config
-   - **reviewer-ui** — for .tsx, .css, images, theme files
-   - **reviewer-ux** — for .tsx, route/form/nav components
-   - **reviewer-backend-python** — for .py, pyproject.toml, alembic
-   - **reviewer-python-quality** — for .py files
-   - **reviewer-tests** — for test/spec files, conftest, vitest config
-   - **reviewer-devops** — for .tf, Dockerfile, docker-compose, .github/workflows, Makefile
-   - **reviewer-database** — for alembic/, .sql, SQLAlchemy models
-   - **reviewer-docs** — for .md, mkdocs.yml, openapi specs
-   - **reviewer-general-purpose** — fallback for unmatched files
+   - **spk-reviewer-security** — ALWAYS run this, for all files
+   - **spk-reviewer-frontend** — for .ts, .tsx, .css, vite/eslint config
+   - **spk-reviewer-ui** — for .tsx, .css, images, theme files
+   - **spk-reviewer-ux** — for .tsx, route/form/nav components
+   - **spk-reviewer-backend-python** — for .py, pyproject.toml, alembic
+   - **spk-reviewer-python-quality** — for .py files
+   - **spk-reviewer-tests** — for test/spec files, conftest, vitest config
+   - **spk-reviewer-devops** — for .tf, Dockerfile, docker-compose, .github/workflows, Makefile
+   - **spk-reviewer-database** — for alembic/, .sql, SQLAlchemy models
+   - **spk-reviewer-docs** — for .md, mkdocs.yml, openapi specs
+   - **spk-reviewer-general-purpose** — fallback for unmatched files
 
    Each agent returns a single JSON block with `version`, `agent`, `summary`, and `comments` fields. See `${CLAUDE_PLUGIN_ROOT}/templates/review-output-format.md` for the complete schema reference.
 
-13. **Aggregate results**: Once all agents complete, use the Agent tool to launch the `reviewer-aggregator` agent (from `${CLAUDE_PLUGIN_ROOT}/agents/reviewer-aggregator.md`) with all agent JSON outputs. Pass the PR metadata (title, description, base_ref, head_ref, commit_sha, pull_request_id) so the aggregator output includes the `pr` field. **Also pass the addressed findings list from step 9** — the aggregator will use this to suppress findings that have already been resolved or acknowledged by the PR author. The aggregator will parse, deduplicate (using `dedupe_key`), filter addressed findings, prioritize, and synthesize into the final report.
+13. **Aggregate results**: Once all agents complete, use the Agent tool to launch the `spk-reviewer-aggregator` agent (from `${CLAUDE_PLUGIN_ROOT}/agents/spk-reviewer-aggregator.md`) with all agent JSON outputs. Pass the PR metadata (title, description, base_ref, head_ref, commit_sha, pull_request_id) so the aggregator output includes the `pr` field. **Also pass the addressed findings list from step 9** — the aggregator will use this to suppress findings that have already been resolved or acknowledged by the PR author. The aggregator will parse, deduplicate (using `dedupe_key`), filter addressed findings, prioritize, and synthesize into the final report.
 
 ### Phase 4 — Save Review Locally
 
@@ -183,7 +183,7 @@ Run these commands in parallel (always include `<repo_flag>` so they work from a
     ### Agent Coverage
     | Agent | Role | Files | Findings | Blocking |
     |-------|------|-------|----------|----------|
-    | reviewer-security | security | 5 | 2 | 0 |
+    | spk-reviewer-security | security | 5 | 2 | 0 |
     ```
 
     End with:
@@ -256,7 +256,7 @@ Run these commands in parallel (always include `<repo_flag>` so they work from a
 ## Notes
 
 - **File exclusions**: Files matched by `.gitignore` or `.dockerignore` must NOT be reviewed by any agent unless the user explicitly includes them.
-- Always run `reviewer-security` regardless of file types.
+- Always run `spk-reviewer-security` regardless of file types.
 - Launch as many specialist agents in parallel as possible for speed.
 - The `$ARGUMENTS` variable contains any arguments the user passed: a PR number, a PR URL, or empty (the three modes in Phase 1 step 2).
 - `praise` level findings should NOT be posted as inline comments — include them only in the review body summary to keep the PR clean.

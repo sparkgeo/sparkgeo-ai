@@ -1,5 +1,5 @@
 ---
-name: reviewer-security
+name: spk-reviewer-security
 description: "Security review agent that is ALWAYS invoked for every PR. Reviews all files for secrets, injection vectors, CVEs, authentication gaps, and infrastructure security issues."
 model: opus
 tools: Read, Glob, Grep, Bash
@@ -79,6 +79,6 @@ If your review finds no meaningful issues, that is a valid and valuable outcome.
 
 Read `${CLAUDE_PLUGIN_ROOT}/templates/review-output-format.md` for the structured JSON output schema, field reference, and examples.
 
-- **agent.name**: `reviewer-security`
+- **agent.name**: `spk-reviewer-security`
 - **agent.role**: `security`
 - Always include `references` (CWE IDs, OWASP references) for security findings

@@ -1,5 +1,5 @@
 ---
-name: reviewer-tests
+name: spk-reviewer-tests
 description: "Reviews test quality, coverage gaps, and test configuration across Pytest, Playwright, Vitest, React Testing Library, and Locust."
 model: sonnet
 tools: Read, Glob, Grep, Bash
@@ -63,5 +63,5 @@ If your review finds no meaningful issues, that is a valid and valuable outcome.
 
 Read `${CLAUDE_PLUGIN_ROOT}/templates/review-output-format.md` for the structured JSON output schema, field reference, and examples.
 
-- **agent.name**: `reviewer-tests`
+- **agent.name**: `spk-reviewer-tests`
 - **agent.role**: `testing`

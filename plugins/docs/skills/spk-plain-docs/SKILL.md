@@ -1,5 +1,5 @@
 ---
-name: plain-docs
+name: spk-plain-docs
 description: House style for technical software documentation — READMEs, guides, API docs, tutorials, reference pages, release notes, changelogs, CLI help text, design docs, proposals, ADRs, RFCs, and code comments meant for humans. Derived from ASD-STE100 Simplified Technical English, adapted for software, plus a list of LLM writing tics to remove. Read this before writing or editing any prose documentation, and when asked to make docs clearer, shorter, or less machine-written.
 ---
 

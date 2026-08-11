@@ -1,5 +1,5 @@
 ---
-name: reviewer-ui
+name: spk-reviewer-ui
 description: "Reviews UI changes for design system adherence, visual consistency, theming, and component styling. Covers TSX, CSS, SVG, image assets, and theme/token files."
 model: sonnet
 tools: Read, Glob, Grep, Bash
@@ -74,5 +74,5 @@ If your review finds no meaningful issues, that is a valid and valuable outcome.
 
 Read `${CLAUDE_PLUGIN_ROOT}/templates/review-output-format.md` for the structured JSON output schema, field reference, and examples.
 
-- **agent.name**: `reviewer-ui`
+- **agent.name**: `spk-reviewer-ui`
 - **agent.role**: `ui_design`

@@ -1,5 +1,5 @@
 ---
-name: reviewer-backend-python
+name: spk-reviewer-backend-python
 description: "Reviews backend Python code including FastAPI endpoints, SQLAlchemy models, Alembic migrations, Pydantic schemas, async patterns, and dependency changes."
 model: sonnet
 tools: Read, Glob, Grep, Bash
@@ -67,5 +67,5 @@ If your review finds no meaningful issues, that is a valid and valuable outcome.
 
 Read `${CLAUDE_PLUGIN_ROOT}/templates/review-output-format.md` for the structured JSON output schema, field reference, and examples.
 
-- **agent.name**: `reviewer-backend-python`
+- **agent.name**: `spk-reviewer-backend-python`
 - **agent.role**: `backend`

@@ -1,5 +1,5 @@
 ---
-name: reviewer-docs
+name: spk-reviewer-docs
 description: "Reviews documentation changes including API docs, MkDocs config, README updates, OpenAPI spec accuracy, and docstring quality in changed files."
 model: haiku
 tools: Read, Glob, Grep, Bash
@@ -55,5 +55,5 @@ If your review finds no meaningful issues, that is a valid and valuable outcome.
 
 Read `${CLAUDE_PLUGIN_ROOT}/templates/review-output-format.md` for the structured JSON output schema, field reference, and examples.
 
-- **agent.name**: `reviewer-docs`
+- **agent.name**: `spk-reviewer-docs`
 - **agent.role**: `documentation`

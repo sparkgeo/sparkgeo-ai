@@ -26,8 +26,8 @@ Or install a specific plugin directly:
 
 | Plugin | What it provides |
 |---|---|
-| [github](plugins/github/) | A team of reviewer agents for pull request reviews, and a `/pr` command with a skill to create GitHub pull requests from the active branch. |
-| [docs](plugins/docs/) | The `plain-docs` skill: a house style for technical documentation, derived from ASD-STE100 Simplified Technical English. |
+| [github](plugins/github/) | A team of reviewer agents for pull request reviews, and a `/spk-pr` command with a skill to create GitHub pull requests from the active branch. |
+| [docs](plugins/docs/) | The `spk-plain-docs` skill: a house style for technical documentation, derived from ASD-STE100 Simplified Technical English. |
 | [python](plugins/python/) | Agents for Python development, starting with the `spk-fast-api` agent for designing, building, and reviewing production-ready FastAPI applications. |
 
 ## Repository layout
@@ -66,6 +66,8 @@ Before adding or substantially changing a plugin:
    - `agents/<agent-name>.md` — agent definitions (system prompts / specialist behaviors).
    - `commands/<command-name>.md` — slash commands.
 
+   Prefix every skill, agent, and command name (and its file or directory name) with `spk-`, e.g. `spk-pr-writer`, `spk-reviewer-security`, `spk-pr`. The prefix marks the component as coming from the Sparkgeo marketplace and avoids collisions with built-ins or components from other marketplaces.
+
 3. Register the plugin in [.claude-plugin/marketplace.json](.claude-plugin/marketplace.json) with a matching `name`, `source`, `description`, and `version`.
 
 4. Open a pull request and request review from at least one AI working group member.
@@ -80,7 +82,7 @@ A skill is a folder with a `SKILL.md` file:
 
 ```markdown
 ---
-name: my-skill-name
+name: spk-my-skill-name
 description: A clear description of what this skill does and when to use it
 ---
 
@@ -105,7 +107,7 @@ An agent is one markdown file under the plugin's `agents/` directory:
 
 ```markdown
 ---
-name: my-agent-name
+name: spk-my-agent-name
 description: When to invoke this agent and what it is responsible for
 ---
 

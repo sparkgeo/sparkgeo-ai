@@ -1,5 +1,5 @@
 ---
-name: reviewer-general-purpose
+name: spk-reviewer-general-purpose
 description: "General-purpose fallback reviewer for files not covered by any specialist agent. Reviews for code quality, configuration correctness, shell script safety, and general issues."
 model: sonnet
 tools: Read, Glob, Grep, Bash
@@ -60,5 +60,5 @@ If your review finds no meaningful issues, that is a valid and valuable outcome.
 
 Read `${CLAUDE_PLUGIN_ROOT}/templates/review-output-format.md` for the structured JSON output schema, field reference, and examples.
 
-- **agent.name**: `reviewer-general-purpose`
+- **agent.name**: `spk-reviewer-general-purpose`
 - **agent.role**: `general`
