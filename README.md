@@ -1,37 +1,82 @@
 # Sparkgeo AI
 
-A shared repository of reusable AI skills, agent prompts, rules, and workflows for common tasks across Sparkgeo. Use it in Cursor or Claude Code. The goal is to make AI usage more consistent, higher quality, and easier to reuse across teams.
+A Claude Code plugin marketplace for Sparkgeo. It holds reusable skills, agents, and commands, packaged as plugins that you install from one place. The goal is to make AI usage more consistent, higher quality, and easier to reuse across teams.
 
-## What lives here
+## Install the marketplace
 
-- **[agents/](agents/)**: Agent definitions (system prompts / specialist behaviors). Add one markdown file per agent.
-- **[skills/](skills/)**: Reusable skills and step-by-step instructions or checklists for repeatable tasks.
-- **[rules/](rules/)**: Baseline rules loaded into AI sessions (coding standards, git habits, org preferences).
-- **[mcp/](mcp/)**: Notes, configs, or pointers related to Model Context Protocol servers used at Sparkgeo.
+In Claude Code, add the marketplace:
 
-## Using this repo
+```
+/plugin marketplace add sparkgeo/sparkgeo-ai
+```
 
-1. Add workflows inside the project repo (often `.cursor/` or `.claude/`), or in your editor’s user-level skills or rules folder so they apply globally.
-2. Prefer small, composable pieces: one agent per file and focused rules.
-3. When adding or improving workflows, open a pull request and request review from at least one AI working group member.
+Then browse and install plugins:
+
+```
+/plugin
+```
+
+Or install a specific plugin directly:
+
+```
+/plugin install github@sparkgeo-marketplace
+```
+
+## Plugins
+
+| Plugin | What it provides |
+|---|---|
+| [github](plugins/github/) | A team of reviewer agents for pull request reviews, and a `/pr` command with a skill to create GitHub pull requests from the active branch. |
+| [docs](plugins/docs/) | The `plain-docs` skill: a house style for technical documentation, derived from ASD-STE100 Simplified Technical English. |
+| [fastapi](plugins/fastapi/) | The `sg-fast-api` agent for designing, building, and reviewing production-ready FastAPI applications. |
+
+## Repository layout
+
+- **[.claude-plugin/marketplace.json](.claude-plugin/marketplace.json)**: The marketplace manifest. Every plugin is listed here.
+- **[plugins/](plugins/)**: One directory per plugin. Each plugin has a `.claude-plugin/plugin.json` manifest and any of `skills/`, `agents/`, `commands/`, and supporting files.
+- **[rules/](rules/)**: Baseline rules to load into AI sessions (coding standards, git habits, org preferences). These are not part of the marketplace — copy them into your project or user settings.
 
 ## Contributing
 
 Contributions are welcome from all teams.
 
-Before adding or substantially changing an agent, skill, rule, or workflow:
+Before adding or substantially changing a plugin:
 
 - Check if something similar already exists.
-- Prefer improving existing content over creating duplicates.
+- Prefer improving an existing plugin over creating a duplicate.
 - Reference relevant standards where appropriate (security, geospatial, or team-specific).
+
+### Adding a plugin
+
+1. Create a directory under `plugins/` with a `.claude-plugin/plugin.json` manifest:
+
+   ```json
+   {
+     "name": "my-plugin",
+     "description": "What this plugin does and when to use it",
+     "version": "1.0.0",
+     "author": {
+       "name": "Your Name"
+     }
+   }
+   ```
+
+2. Add content in the standard component directories inside the plugin:
+   - `skills/<skill-name>/SKILL.md` — reusable skills with step-by-step instructions.
+   - `agents/<agent-name>.md` — agent definitions (system prompts / specialist behaviors).
+   - `commands/<command-name>.md` — slash commands.
+
+3. Register the plugin in [.claude-plugin/marketplace.json](.claude-plugin/marketplace.json) with a matching `name`, `source`, `description`, and `version`.
+
+4. Open a pull request and request review from at least one AI working group member.
 
 ### Getting your PR reviewed
 
 The repo operates on a community model — assume that no one is actively monitoring for new contributions. If you'd like feedback on your PR, request a review from a relevant team lead or domain expert. For general submissions without an obvious owner, request a review from [@yeelauren](https://github.com/yeelauren) or [@jbants](https://github.com/jbants) to route it for triage.
 
-## Creating a basic skill
+### Creating a basic skill
 
-Add a folder with a `SKILL.md` file containing instructions. Example structure:
+A skill is a folder with a `SKILL.md` file:
 
 ```markdown
 ---
@@ -54,9 +99,9 @@ description: A clear description of what this skill does and when to use it
 - Guideline 2
 ```
 
-## Creating a basic agent
+### Creating a basic agent
 
-Add one markdown file under [agents/](agents/). Example outline:
+An agent is one markdown file under the plugin's `agents/` directory:
 
 ```markdown
 ---

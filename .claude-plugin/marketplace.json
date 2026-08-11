@@ -1,0 +1,36 @@
+{
+  "name": "sparkgeo-marketplace",
+  "owner": {
+    "name": "Sparkgeo",
+    "email": "hi@sparkgeo.com"
+  },
+  "plugins": [
+    {
+      "name": "github",
+      "source": "./plugins/github",
+      "description": "Sparkgeo GitHub workflows: a team of reviewer agents for pull request reviews, and a skill to create GitHub pull requests from the active branch.",
+      "version": "2.0.0",
+      "author": {
+        "name": "Dustin Sampson"
+      }
+    },
+    {
+      "name": "docs",
+      "source": "./plugins/docs",
+      "description": "Sparkgeo documentation style: the plain-docs skill, a house style for technical documentation derived from ASD-STE100 Simplified Technical English.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Dustin Sampson"
+      }
+    },
+    {
+      "name": "fastapi",
+      "source": "./plugins/fastapi",
+      "description": "Sparkgeo FastAPI development: the sg-fast-api agent for designing, building, and reviewing production-ready FastAPI applications.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Dustin Sampson"
+      }
+    }
+  ]
+}
