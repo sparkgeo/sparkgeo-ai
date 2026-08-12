@@ -1,5 +1,5 @@
 {
-  "name": "python",
+  "name": "spk-python",
   "description": "Sparkgeo Python development: agents for building and reviewing production-ready Python applications, starting with the spk-fast-api agent for FastAPI services.",
   "version": "1.0.0",
   "author": {

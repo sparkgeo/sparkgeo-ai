@@ -1,5 +1,5 @@
 {
-  "name": "github",
+  "name": "spk-github",
   "description": "Sparkgeo GitHub workflows: a team of reviewer agents for pull request reviews, and a skill to create GitHub pull requests from the active branch.",
   "version": "3.0.0",
   "author": {

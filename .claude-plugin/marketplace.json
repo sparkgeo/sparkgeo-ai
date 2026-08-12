@@ -6,8 +6,8 @@
   },
   "plugins": [
     {
-      "name": "github",
-      "source": "./plugins/github",
+      "name": "spk-github",
+      "source": "./plugins/spk-github",
       "description": "Sparkgeo GitHub workflows: a team of reviewer agents for pull request reviews, and a skill to create GitHub pull requests from the active branch.",
       "version": "3.0.0",
       "author": {
@@ -15,8 +15,8 @@
       }
     },
     {
-      "name": "docs",
-      "source": "./plugins/docs",
+      "name": "spk-docs",
+      "source": "./plugins/spk-docs",
       "description": "Sparkgeo documentation style: the spk-plain-docs skill, a house style for technical documentation derived from ASD-STE100 Simplified Technical English.",
       "version": "2.0.0",
       "author": {
@@ -24,8 +24,8 @@
       }
     },
     {
-      "name": "python",
-      "source": "./plugins/python",
+      "name": "spk-python",
+      "source": "./plugins/spk-python",
       "description": "Sparkgeo Python development: agents for building and reviewing production-ready Python applications, starting with the spk-fast-api agent for FastAPI services.",
       "version": "1.0.0",
       "author": {

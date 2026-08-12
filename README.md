@@ -19,16 +19,16 @@ Then browse and install plugins:
 Or install a specific plugin directly:
 
 ```
-/plugin install github@sparkgeo-marketplace
+/plugin install spk-github@sparkgeo-marketplace
 ```
 
 ## Plugins
 
 | Plugin | What it provides |
 |---|---|
-| [github](plugins/github/) | A team of reviewer agents for pull request reviews, and a `/spk-pr` command with a skill to create GitHub pull requests from the active branch. |
-| [docs](plugins/docs/) | The `spk-plain-docs` skill: a house style for technical documentation, derived from ASD-STE100 Simplified Technical English. |
-| [python](plugins/python/) | Agents for Python development, starting with the `spk-fast-api` agent for designing, building, and reviewing production-ready FastAPI applications. |
+| [spk-github](plugins/spk-github/) | A team of reviewer agents for pull request reviews, and a `/spk-pr` command with a skill to create GitHub pull requests from the active branch. |
+| [spk-docs](plugins/spk-docs/) | The `spk-plain-docs` skill: a house style for technical documentation, derived from ASD-STE100 Simplified Technical English. |
+| [spk-python](plugins/spk-python/) | Agents for Python development, starting with the `spk-fast-api` agent for designing, building, and reviewing production-ready FastAPI applications. |
 
 ## Repository layout
 
@@ -52,7 +52,7 @@ Before adding or substantially changing a plugin:
 
    ```json
    {
-     "name": "my-plugin",
+     "name": "spk-my-plugin",
      "description": "What this plugin does and when to use it",
      "version": "1.0.0",
      "author": {
@@ -66,7 +66,7 @@ Before adding or substantially changing a plugin:
    - `agents/<agent-name>.md` — agent definitions (system prompts / specialist behaviors).
    - `commands/<command-name>.md` — slash commands.
 
-   Prefix every skill, agent, and command name (and its file or directory name) with `spk-`, e.g. `spk-pr-writer`, `spk-reviewer-security`, `spk-pr`. The prefix marks the component as coming from the Sparkgeo marketplace and avoids collisions with built-ins or components from other marketplaces.
+   Prefix the plugin name (and its directory under `plugins/`) and every skill, agent, and command name (and its file or directory name) with `spk-`, e.g. `spk-my-plugin`, `spk-pr-writer`, `spk-reviewer-security`, `spk-pr`. The prefix marks the component as coming from the Sparkgeo marketplace and avoids collisions with built-ins or components from other marketplaces.
 
 3. Register the plugin in [.claude-plugin/marketplace.json](.claude-plugin/marketplace.json) with a matching `name`, `source`, `description`, and `version`.
 
