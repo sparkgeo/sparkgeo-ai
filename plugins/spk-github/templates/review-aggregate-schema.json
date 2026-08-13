@@ -72,14 +72,13 @@
         },
         "counts": {
           "type": "object",
-          "required": ["severe", "warning", "question", "info", "praise"],
+          "required": ["severe", "warning", "question", "info"],
           "unevaluatedProperties": false,
           "properties": {
             "severe":   { "type": "integer", "minimum": 0 },
             "warning":  { "type": "integer", "minimum": 0 },
             "question": { "type": "integer", "minimum": 0 },
-            "info":     { "type": "integer", "minimum": 0 },
-            "praise":   { "type": "integer", "minimum": 0 }
+            "info":     { "type": "integer", "minimum": 0 }
           }
         },
         "suppressed_as_addressed": {
@@ -100,7 +99,7 @@
 
     "level": {
       "type": "string",
-      "enum": ["praise", "info", "question", "warning", "severe"]
+      "enum": ["info", "question", "warning", "severe"]
     },
 
     "category": {

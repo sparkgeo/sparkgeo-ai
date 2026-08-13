@@ -62,7 +62,7 @@ Each specialist agent's output is a JSON object with this structure:
 
    Track the count of suppressed findings for the summary.
 
-5. **Prioritize**: Order findings by severity: `severe` > `warning` > `question` > `info` > `praise`.
+5. **Prioritize**: Order findings by severity: `severe` > `warning` > `question` > `info`.
 
 6. **Contextualize**: Add cross-cutting observations that individual agents may have missed because they only saw their subset of files.
 
@@ -88,7 +88,7 @@ Return a single JSON code block conforming to `${CLAUDE_PLUGIN_ROOT}/templates/r
   "summary": {
     "overall_assessment": "1-3 sentence synthesis of the review",
     "blocking": true,
-    "counts": { "severe": 1, "warning": 2, "question": 0, "info": 1, "praise": 1 },
+    "counts": { "severe": 1, "warning": 2, "question": 0, "info": 1 },
     "suppressed_as_addressed": 3,
     "files_reviewed": 12,
     "files_total": 12
@@ -145,7 +145,7 @@ Return a single JSON code block conforming to `${CLAUDE_PLUGIN_ROOT}/templates/r
 
 - Be concise but specific — reviewers need actionable feedback
 - When deduplicating, keep the most detailed description and credit all agents in `found_by`
-- Praise should be genuine — highlight genuinely good patterns, not just "code exists"
+- Do not include praise or positive feedback — drop any praise-like findings a specialist agent produced rather than passing them through
 - If agents disagreed on severity, use the highest and note the disagreement in the `comment`
 - The review should be constructive — the goal is to help, not to gatekeep
 - If no findings exist for a level, the count should be 0 (do not omit it)

@@ -22,8 +22,7 @@ Every specialist agent must return a **single JSON code block** as its complete 
       "severe": 0,
       "warning": 0,
       "question": 0,
-      "info": 0,
-      "praise": 0
+      "info": 0
     }
   },
   "comments": []
@@ -114,11 +113,12 @@ Use `diff_comment` for findings that span multiple files, concern the overall ch
 
 | Level      | Meaning                                    | blocking | suggestion required |
 |------------|--------------------------------------------|----------|---------------------|
-| `praise`   | Positive feedback — good pattern or fix    | false    | no                  |
 | `info`     | Informational note, no action needed       | false    | no                  |
 | `question` | Needs clarification from the author        | false    | no                  |
 | `warning`  | Should fix, not blocking merge             | false    | **yes**             |
 | `severe`   | Must fix before merge                      | true     | **yes**             |
+
+Do not report praise or positive feedback at any level. Every finding must be actionable or informative — if a comment's only purpose is to compliment the code, omit it entirely (do not relabel it as `info`).
 
 ### category — Finding Domain
 
@@ -214,27 +214,3 @@ To help developers jump directly to findings in their IDE:
 
 - **inline_comment**: The finding points to specific code at a known file and line range. This is the default — use it whenever possible.
 - **diff_comment**: The finding is about a pattern across multiple files, a missing file/test that should exist, an architectural concern, or something that doesn't map to a single location.
-
-## Praise
-
-Use `level: "praise"` to highlight genuinely good patterns. Praise should be specific and meaningful — not just "code exists." Good praise reinforces patterns the team should repeat.
-
-```json
-{
-  "id": "CR-005",
-  "type": "inline_comment",
-  "level": "praise",
-  "category": "maintainability",
-  "confidence": "high",
-  "blocking": false,
-  "summary": "Clean separation of validation logic into a pure function",
-  "comment": "Extracting token validation into a pure function makes it easy to test and reason about independently.",
-  "location": {
-    "file_path": "src/auth/validate.ts",
-    "side": "new",
-    "start_line": 95,
-    "end_line": 115,
-    "symbol": "validateTokenClaims"
-  }
-}
-```
