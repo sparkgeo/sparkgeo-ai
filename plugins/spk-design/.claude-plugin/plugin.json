@@ -1,0 +1,8 @@
+{
+  "name": "spk-design",
+  "description": "Sparkgeo design workflows: skills and resources for software design tasks, such as creating and reviewing Architectural Decision Records.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Mike Connor"
+  }
+}
