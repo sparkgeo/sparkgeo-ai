@@ -1,6 +1,6 @@
 ---
 name: create-adr
-description: Scaffold a new Architectural Decision Record (ADR) on its own branch. Use when the user asks to "create an ADR", "start a new ADR", "draft an ADR", or invokes /spk-design:create-adr. Finds (or asks for) the repo's ADR directory, determines the next sequential ADR ID, creates a branch, pre-fills the header of the repo's template (or a bundled MADR template), and walks through commit and push with the user's confirmation.
+description: Scaffold a new Architectural Decision Record (ADR) on its own branch. Use when the user asks to "create an ADR", "start a new ADR", "draft an ADR", or invokes /spk-design:create-adr. Finds (or asks for) the repo's ADR directory, determines the next sequential ADR ID, creates a branch, pre-fills the header of the repo's template (or a bundled MADR template), walks through commit and push with the user's confirmation, and opens a draft PR whose body links the rendered ADR and lists the steps to get it ready for review.
 ---
 
 # Create ADR
@@ -91,12 +91,39 @@ If there is no index, skip this step; do not invent one.
   git push -u origin adr-<NNN>-<slug>
   ```
 
-## 9. Report outcome
+## 9. Create the draft PR
+
+First check whether the repo already automates this: if `.github/workflows/`
+contains a workflow whose triggers match ADR files or branches (grep for `adr`
+in the workflow files), wait for it and update the body of the PR it opens
+(`gh pr edit`) rather than creating a duplicate. Otherwise:
+
+```
+gh pr create --draft --title "ADR-<NNN>: <title>" --body "..."
+```
+
+The PR body must contain:
+
+- A link to the ADR markdown file on the branch, so reviewers land on the
+  rendered version:
+  `<repo-url>/blob/adr-<NNN>-<slug>/<adr_dir>/adr-<NNN>-<slug>.md`
+  (get `<repo-url>` from `gh repo view --json url`).
+- A checklist of steps to get the ADR ready for review:
+  - [ ] Fill in the remaining placeholder sections (Decision Drivers,
+        Considered Options, Decision Outcome, Confirmation)
+  - [ ] Run `/spk-design:review-adr` and address its findings
+  - [ ] Replace the `TBD` PR-link cell in the ADR index with this PR's URL
+        (skip if the repo has no index)
+  - [ ] Link the related issue(s), if any
+  - [ ] Add at least one reviewer
+  - [ ] Mark the PR ready for review
+
+## 10. Report outcome
 
 Print:
-- The new branch name and file path.
-- If `.github/workflows/` contains a workflow whose triggers match ADR files or branches (grep for `adr` in the workflow files), note that it will likely act on the push (e.g. open a draft PR) and remind the user to update any `TBD` index cell with the PR link. Otherwise, offer to open a PR with `gh pr create`.
-- A reminder that the body sections of the new ADR file are still placeholders and need human content.
+- The new branch name, the ADR file path, and the draft PR URL.
+- A reminder that the body sections of the new ADR file are still placeholders
+  and the PR checklist tracks what remains before review.
 
 ## Notes / gotchas
 
