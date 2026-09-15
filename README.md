@@ -29,6 +29,7 @@ Or install a specific plugin directly:
 | [spk-github](plugins/spk-github/) | A team of reviewer agents for pull request reviews, and a `/spk-pr` command with a skill to create GitHub pull requests from the active branch. |
 | [spk-docs](plugins/spk-docs/) | The `spk-plain-docs` skill: a house style for technical documentation, derived from ASD-STE100 Simplified Technical English. |
 | [spk-python](plugins/spk-python/) | Agents for Python development, starting with the `spk-fast-api` agent for designing, building, and reviewing production-ready FastAPI applications. |
+| [spk-design](plugins/spk-design/) | Software design workflows: the `create-adr` skill scaffolds an Architectural Decision Record on its own branch with a draft PR, and the `review-adr` skill reviews an ADR against the repo, interviewing the author when it is incomplete. |
 
 ## Repository layout
 
