@@ -29,6 +29,7 @@ Or install a specific plugin directly:
 | [spk-github](plugins/spk-github/) | A team of reviewer agents for pull request reviews, and a `/spk-pr` command with a skill to create GitHub pull requests from the active branch. |
 | [spk-docs](plugins/spk-docs/) | The `spk-plain-docs` skill: a house style for technical documentation, derived from ASD-STE100 Simplified Technical English. |
 | [spk-python](plugins/spk-python/) | Agents for Python development, starting with the `spk-fast-api` agent for designing, building, and reviewing production-ready FastAPI applications. |
+| [spk-design](plugins/spk-design/) | Software design workflows: the `create-adr` skill scaffolds an Architectural Decision Record on its own branch with a draft PR, and the `review-adr` skill reviews an ADR against the repo, interviewing the author when it is incomplete. |
 
 ## Repository layout
 
@@ -66,7 +67,7 @@ Before adding or substantially changing a plugin:
    - `agents/<agent-name>.md` — agent definitions (system prompts / specialist behaviors).
    - `commands/<command-name>.md` — slash commands.
 
-   Prefix the plugin name (and its directory under `plugins/`) and every skill, agent, and command name (and its file or directory name) with `spk-`, e.g. `spk-my-plugin`, `spk-pr-writer`, `spk-reviewer-security`, `spk-pr`. The prefix marks the component as coming from the Sparkgeo marketplace and avoids collisions with built-ins or components from other marketplaces.
+   Prefix the plugin name (and its directory under `plugins/`) with `spk-`, e.g. `spk-my-plugin`. The prefix marks the plugin as coming from the Sparkgeo marketplace and avoids collisions with built-ins or components from other marketplaces. Skills inside a plugin do not need the prefix: they are already namespaced by the plugin name (e.g. `/spk-design:create-adr`), so name them for what they do, like `create-adr`. Agent and command names keep the `spk-` prefix, e.g. `spk-reviewer-security`, `spk-pr`.
 
 3. Register the plugin in [.claude-plugin/marketplace.json](.claude-plugin/marketplace.json) with a matching `name`, `source`, `description`, and `version`.
 
@@ -82,7 +83,7 @@ A skill is a folder with a `SKILL.md` file:
 
 ```markdown
 ---
-name: spk-my-skill-name
+name: my-skill-name
 description: A clear description of what this skill does and when to use it
 ---
 
