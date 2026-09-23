@@ -1,0 +1,8 @@
+{
+  "name": "spk-helpers",
+  "description": "Sparkgeo Helpers: Agents to help out anywhere they can.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Dustin Sampson"
+  }
+}
