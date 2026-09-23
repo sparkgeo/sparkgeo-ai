@@ -4,6 +4,8 @@ This document defines the structured JSON output format that all review agents m
 
 The canonical JSON Schema is at `${CLAUDE_PLUGIN_ROOT}/templates/review-schema.json`.
 
+Specialist output is treated as **candidate findings**: before anything is posted to GitHub, severe candidates and lower-confidence warnings are independently checked by a verifier agent (`spk-reviewer-verifier` or `spk-reviewer-verifier-deep`, output schema at `${CLAUDE_PLUGIN_ROOT}/templates/verification-schema.json`). Candidates the verifier refutes are dropped. This means specialists should report every genuine concern with honest `confidence` and concrete `evidence` — the evidence is what the verifier starts from — rather than self-censoring or inflating certainty.
+
 ## Output Structure
 
 Every specialist agent must return a **single JSON code block** as its complete output. No text outside the JSON block.

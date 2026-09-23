@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "verification-schema.json",
+  "title": "Candidate Verification Output",
+  "description": "Structured output for the verifier agents (spk-reviewer-verifier, spk-reviewer-verifier-deep). One verdict per candidate finding, produced before publication.",
+  "type": "object",
+  "required": ["version", "agent", "verdicts"],
+  "unevaluatedProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "agent": {
+      "type": "object",
+      "required": ["name", "role"],
+      "unevaluatedProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["spk-reviewer-verifier", "spk-reviewer-verifier-deep"]
+        },
+        "role": {
+          "type": "string",
+          "const": "verification"
+        }
+      }
+    },
+    "verdicts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/verdict" }
+    }
+  },
+
+  "$defs": {
+
+    "verdict": {
+      "type": "object",
+      "required": ["candidate_id", "verdict", "confidence", "reasoning", "evidence"],
+      "unevaluatedProperties": false,
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+/CR-[0-9]{3,}$",
+          "description": "Agent-qualified candidate id: <specialist-agent-name>/<CR-NNN>"
+        },
+        "verdict": {
+          "type": "string",
+          "enum": ["confirmed", "rejected", "needs_human_context"]
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "The verifier's confidence in its own verdict"
+        },
+        "reasoning": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why the verdict was reached — the traced scenario or the break in the candidate's chain"
+        },
+        "evidence": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "description": "Quotes from real files with paths and line numbers, or concrete search results, supporting the verdict"
+        },
+        "open_question": {
+          "type": "string",
+          "minLength": 1,
+          "description": "For needs_human_context: the specific missing information a human must supply"
+        },
+        "corrected_level": {
+          "type": "string",
+          "enum": ["info", "question", "warning", "severe"],
+          "description": "Present only when verification showed the candidate's severity is wrong"
+        },
+        "corrected_location": {
+          "type": "object",
+          "required": ["file_path", "start_line", "end_line"],
+          "unevaluatedProperties": false,
+          "description": "Present only when verification showed the candidate's location is wrong",
+          "properties": {
+            "file_path":  { "type": "string", "minLength": 1 },
+            "side":       { "type": "string", "enum": ["old", "new"], "default": "new" },
+            "start_line": { "type": "integer", "minimum": 1 },
+            "end_line":   { "type": "integer", "minimum": 1 },
+            "symbol":     { "type": "string" }
+          }
+        }
+      },
+      "if": {
+        "properties": { "verdict": { "const": "needs_human_context" } },
+        "required": ["verdict"]
+      },
+      "then": {
+        "required": ["open_question"]
+      }
+    }
+  }
+}

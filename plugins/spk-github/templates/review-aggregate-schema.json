@@ -86,6 +86,16 @@
           "minimum": 0,
           "description": "Count of findings suppressed because they matched previously resolved or acknowledged review threads"
         },
+        "rejected_by_verification": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of candidate findings dropped because a verifier agent refuted them"
+        },
+        "needs_human_context": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of candidate findings downgraded to question because verification required information unavailable to the pipeline"
+        },
         "files_reviewed": {
           "type": "integer",
           "minimum": 0
@@ -214,14 +224,61 @@
           "type": "array",
           "items": { "type": "string", "pattern": "^CR-[0-9]{3,}$" },
           "uniqueItems": true
+        },
+        "verification": {
+          "$ref": "#/$defs/verification"
         }
       },
-      "if": {
-        "properties": { "level": { "enum": ["warning", "severe"] } },
-        "required": ["level"]
-      },
-      "then": {
-        "required": ["suggestion", "why_it_matters"]
+      "allOf": [
+        {
+          "if": {
+            "properties": { "level": { "enum": ["warning", "severe"] } },
+            "required": ["level"]
+          },
+          "then": {
+            "required": ["suggestion", "why_it_matters"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "level": { "const": "severe" } },
+            "required": ["level"]
+          },
+          "then": {
+            "required": ["verification"],
+            "properties": {
+              "verification": {
+                "properties": {
+                  "status": { "const": "confirmed" }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "verification": {
+      "type": "object",
+      "required": ["status"],
+      "unevaluatedProperties": false,
+      "description": "Outcome of the independent candidate-verification stage for this finding",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["confirmed", "unverified", "needs_human_context"],
+          "description": "confirmed = a verifier agent validated the finding; unverified = the finding skipped verification (non-blocking levels only); needs_human_context = verification depended on information unavailable to the pipeline"
+        },
+        "verified_by": {
+          "type": "string",
+          "enum": ["spk-reviewer-verifier", "spk-reviewer-verifier-deep"],
+          "description": "Which verifier agent produced the verdict (absent for unverified)"
+        },
+        "evidence": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "The verifier's supporting evidence"
+        }
       }
     },
 
