@@ -21,8 +21,7 @@ Every specialist agent must return a **single JSON code block** as its complete 
     "counts": {
       "severe": 0,
       "warning": 0,
-      "question": 0,
-      "info": 0
+      "question": 0
     }
   },
   "comments": []
@@ -62,11 +61,11 @@ Use `inline_comment` when the finding points to a specific location in a file. T
   "category": "correctness",
   "confidence": "high",
   "blocking": false,
-  "summary": "Token expiry check appears inverted",
-  "comment": "The new condition returns success when the token has already expired. The success path now executes when isExpired(token) is true.",
-  "suggestion": "Reverse the comparison: `if (!isExpired(token))` or rename the helper so its semantics match the call site.",
-  "suggestion_consequences": "If other call sites rely on the current (inverted) behavior, reversing the check here will break them too — audit all usages of isExpired() before applying.",
-  "why_it_matters": "Expired tokens may be treated as valid, allowing unauthorized access.",
+  "summary": "Expired tokens pass validation",
+  "comment": "This returns `valid: true` when `isExpired(token)` is true. The check is reversed.",
+  "suggestion": "Change the condition to `if (!isExpired(token))`.",
+  "suggestion_consequences": "Other callers may depend on the current behavior. Check all uses of `isExpired()` first.",
+  "why_it_matters": "Users with expired tokens can get access.",
   "evidence": [
     "Line 120: `if (isExpired(token)) { return { valid: true }; }`"
   ],
@@ -94,10 +93,10 @@ Use `diff_comment` for findings that span multiple files, concern the overall ch
   "category": "test_gap",
   "confidence": "medium",
   "blocking": false,
-  "summary": "No regression test covers the new expiry branch",
-  "comment": "Auth validation logic changed but no test file updates are visible in the diff for expired-token behavior.",
-  "suggestion": "Add tests for valid, expired, and boundary-case token timestamps.",
-  "why_it_matters": "Without coverage, this branch is easy to regress silently.",
+  "summary": "No test for expired tokens",
+  "comment": "The token check changed, but no test covers expired tokens.",
+  "suggestion": "Add tests for a valid token, an expired token, and a token that expires at the current time.",
+  "why_it_matters": "A future change can break this check and no test will fail.",
   "applies_to": {
     "file_paths": ["src/auth/validate.ts", "test/auth/validate.test.ts"],
     "symbols": ["validateToken"]
@@ -107,18 +106,39 @@ Use `diff_comment` for findings that span multiple files, concern the overall ch
 }
 ```
 
+## Writing Style
+
+Developers read these comments on GitHub. Write so a busy reader understands the finding in a few seconds.
+
+- Use short sentences. Put one idea in each sentence.
+- Use simple, common words. Write "use", not "utilize". Write "because", not "due to the fact that".
+- Use active voice. Write "This function returns null", not "Null is returned by this function".
+- Start with the problem. Do not restate what the code does before you get to the problem.
+- Name the exact thing: the function, variable, line, or value. Do not write "this logic" or "the implementation".
+- Be direct. Do not hedge with "might potentially", "it seems that", or "consider possibly".
+- Keep `summary` under 80 characters. Make it a plain statement of the problem, not a category label.
+- Keep `comment` to 1-3 sentences. Keep `suggestion` and `why_it_matters` to 1-2 sentences each.
+- Do not repeat the same point in `comment`, `suggestion`, and `why_it_matters`. Each field adds new information.
+- Do not use filler such as "Great job, but", "It is worth noting that", or "In order to".
+- Do not use em dashes. Use a period or a comma.
+- Add a diagram to explain a concept when it makes sense.
+
+| Avoid | Prefer |
+|-------|--------|
+| "The current implementation may potentially fail to adequately handle scenarios in which the input value is null." | "This crashes when `user` is null." |
+| "It would be advisable to consider leveraging a parameterized query to mitigate injection risk." | "Use a parameterized query. The current string format allows SQL injection." |
+
 ## Field Reference
 
 ### level — Finding Severity
 
 | Level      | Meaning                                    | blocking | suggestion required |
 |------------|--------------------------------------------|----------|---------------------|
-| `info`     | Informational note, no action needed       | false    | no                  |
 | `question` | Needs clarification from the author        | false    | no                  |
 | `warning`  | Should fix, not blocking merge             | false    | **yes**             |
 | `severe`   | Must fix before merge                      | true     | **yes**             |
 
-Do not report praise or positive feedback at any level. Every finding must be actionable or informative — if a comment's only purpose is to compliment the code, omit it entirely (do not relabel it as `info`).
+Report only findings the author can act on or must answer. Do not report praise, positive feedback, or notes that need no action. If a finding needs no action, omit it.
 
 ### category — Finding Domain
 
