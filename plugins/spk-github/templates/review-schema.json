@@ -90,13 +90,12 @@
         },
         "counts": {
           "type": "object",
-          "required": ["severe", "warning", "question", "info"],
+          "required": ["severe", "warning", "question"],
           "unevaluatedProperties": false,
           "properties": {
             "severe":   { "type": "integer", "minimum": 0 },
             "warning":  { "type": "integer", "minimum": 0 },
-            "question": { "type": "integer", "minimum": 0 },
-            "info":     { "type": "integer", "minimum": 0 }
+            "question": { "type": "integer", "minimum": 0 }
           }
         }
       }
@@ -114,8 +113,8 @@
 
     "level": {
       "type": "string",
-      "enum": ["info", "question", "warning", "severe"],
-      "description": "Severity from least to most critical: info → question → warning → severe"
+      "enum": ["question", "warning", "severe"],
+      "description": "Severity from least to most critical: question → warning → severe"
     },
 
     "category": {
@@ -241,12 +240,12 @@
         "summary": {
           "type": "string",
           "minLength": 1,
-          "description": "Short title of the finding (< 120 chars)"
+          "description": "Short title of the finding in plain language (< 80 chars)"
         },
         "comment": {
           "type": "string",
           "minLength": 1,
-          "description": "Detailed explanation of the finding"
+          "description": "What is wrong, in 1-3 short sentences of plain language"
         },
         "suggestion": {
           "type": "string",

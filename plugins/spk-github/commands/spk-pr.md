@@ -142,9 +142,9 @@ Run these commands in parallel (always include `<repo_flag>` so they work from a
 
     **Assessment:** <overall_assessment from aggregator>
 
-    | Severe | Warning | Question | Info |
-    |--------|---------|----------|------|
-    | N | N | N | N |
+    | Severe | Warning | Question |
+    |--------|---------|----------|
+    | N | N | N |
 
     **Files reviewed:** X / Y
     ```
@@ -217,7 +217,7 @@ Run these commands in parallel (always include `<repo_flag>` so they work from a
 
     **Important — line validation**: Inline comments can only reference lines that appear in the PR diff (added lines, removed lines, or context lines within diff hunks). Parse the diff from step 6 to determine valid line ranges for each file. For any `inline_comment` whose line range falls outside the diff hunks for that file, do NOT include it as an inline comment — instead fold it into the review body as an additional finding (formatted like the diff_comments above).
 
-    **Comment limit**: If there are more than 50 inline comments, keep only the top 50 sorted by severity (severe > warning > question > info), then by confidence (high > medium > low). Fold the remaining comments into the review body. This stays well within GitHub's rate limits.
+    **Comment limit**: If there are more than 50 inline comments, keep only the top 50 sorted by severity (severe > warning > question), then by confidence (high > medium > low). Fold the remaining comments into the review body. This stays well within GitHub's rate limits.
 
 17. **Determine the review event**:
     - If the aggregator `summary.blocking` is `true` → `"REQUEST_CHANGES"`
@@ -259,4 +259,5 @@ Run these commands in parallel (always include `<repo_flag>` so they work from a
 - Always run `spk-reviewer-security` regardless of file types.
 - Launch as many specialist agents in parallel as possible for speed.
 - The `$ARGUMENTS` variable contains any arguments the user passed: a PR number, a PR URL, or empty (the three modes in Phase 1 step 2).
-- Do not post praise or positive feedback anywhere in the review — not as inline comments and not in the review body. Report only actionable or informative findings.
+- Do not post praise or positive feedback anywhere in the review — not as inline comments and not in the review body. Report only actionable findings.
+- Post comments in short, plain sentences. Follow the Writing Style rules in `${CLAUDE_PLUGIN_ROOT}/templates/review-output-format.md`.

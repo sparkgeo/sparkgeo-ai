@@ -62,7 +62,7 @@ Each specialist agent's output is a JSON object with this structure:
 
    Track the count of suppressed findings for the summary.
 
-5. **Prioritize**: Order findings by severity: `severe` > `warning` > `question` > `info`.
+5. **Prioritize**: Order findings by severity: `severe` > `warning` > `question`.
 
 6. **Contextualize**: Add cross-cutting observations that individual agents may have missed because they only saw their subset of files.
 
@@ -88,7 +88,7 @@ Return a single JSON code block conforming to `${CLAUDE_PLUGIN_ROOT}/templates/r
   "summary": {
     "overall_assessment": "1-3 sentence synthesis of the review",
     "blocking": true,
-    "counts": { "severe": 1, "warning": 2, "question": 0, "info": 1 },
+    "counts": { "severe": 1, "warning": 2, "question": 1 },
     "suppressed_as_addressed": 3,
     "files_reviewed": 12,
     "files_total": 12
@@ -143,7 +143,9 @@ Return a single JSON code block conforming to `${CLAUDE_PLUGIN_ROOT}/templates/r
 
 ## Guidelines
 
-- Be concise but specific — reviewers need actionable feedback
+- Be concise but specific. Reviewers need actionable feedback
+- Follow the Writing Style rules in `${CLAUDE_PLUGIN_ROOT}/templates/review-output-format.md`. When you merge or keep a finding, rewrite any wordy text from the specialist into short, plain sentences
+- Drop any finding that needs no action from the author. Do not pass through informational notes
 - When deduplicating, keep the most detailed description and credit all agents in `found_by`
 - Do not include praise or positive feedback — drop any praise-like findings a specialist agent produced rather than passing them through
 - If agents disagreed on severity, use the highest and note the disagreement in the `comment`
@@ -151,5 +153,5 @@ Return a single JSON code block conforming to `${CLAUDE_PLUGIN_ROOT}/templates/r
 - If no findings exist for a level, the count should be 0 (do not omit it)
 - If all specialist agents report zero findings, produce a clean review with an `overall_assessment` confirming the code was reviewed thoroughly and no issues were found. Do not fabricate findings — a clean bill of health is a valid and valuable outcome
 - Populate `pr` fields with whatever metadata you received; omit unknown fields
-- When suppressing addressed findings, err on the side of suppression for `info`/`question`/`warning` levels — if the PR author engaged with the feedback, respect that. But never suppress `severe` findings
+- When suppressing addressed findings, err on the side of suppression for `question`/`warning` levels — if the PR author engaged with the feedback, respect that. But never suppress `severe` findings
 - If all new findings were suppressed as addressed, mention this in the `overall_assessment` (e.g., "All previously flagged issues have been addressed")
