@@ -1,265 +1,143 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "review-aggregate-schema.json",
-  "title": "Aggregated Code Review",
-  "description": "Structured output for the spk-reviewer-aggregator agent — merged, deduplicated findings from all specialist agents.",
+  "title": "Aggregated code review",
+  "description": "Two documents use this file. The aggregator agent writes `aggregated.json`: version plus findings, each with found_by. The tool's finalize step then writes `final.json`, which adds the computed pr, run, summary, verification, publication, prior_findings, coverage, and excluded_files fields. Agents never write the computed fields.",
   "type": "object",
-  "required": ["version", "agents_invoked", "summary", "comments", "coverage"],
-  "unevaluatedProperties": false,
+  "required": ["version", "findings"],
   "properties": {
-    "version": {
-      "type": "string",
-      "const": "1.0"
+    "version": { "type": "string", "const": "2.0" },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/aggregateFinding" }
     },
     "pr": {
-      "$ref": "#/$defs/prMetadata"
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" }, "number": { "type": "integer" }, "url": { "type": "string" },
+        "author": { "type": ["string", "null"] }, "base_ref": { "type": "string" }, "head_ref": { "type": "string" },
+        "base_sha": { "type": "string" }, "head_sha": { "type": "string" }
+      }
     },
-    "agents_invoked": {
-      "type": "array",
-      "items": { "type": "string", "minLength": 1 },
-      "uniqueItems": true,
-      "description": "List of agent codenames that contributed findings"
+    "run": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" }, "finalized_at": { "type": "string" },
+        "snapshot_method": { "type": "string", "enum": ["worktree", "shallow_clone", "existing", "none"] },
+        "snapshot_verified": { "type": "boolean" },
+        "agents_invoked": { "type": "array", "items": { "type": "string" } },
+        "agents_failed": { "type": "array", "items": { "type": "string" } },
+        "config_source": { "type": "string" }
+      }
     },
     "summary": {
-      "$ref": "#/$defs/aggregateSummary"
+      "type": "object",
+      "description": "Computed by finalize from published findings. Never hand-written.",
+      "required": ["headline", "blocking", "event", "counts", "coverage_complete"],
+      "properties": {
+        "headline": { "type": "string" },
+        "blocking": { "type": "boolean", "description": "true only when a published severe finding was independently verified" },
+        "event": { "type": "string", "enum": ["COMMENT", "REQUEST_CHANGES"], "description": "REQUEST_CHANGES only when blocking and the repository opted in with request_changes: true" },
+        "counts": {
+          "type": "object",
+          "required": ["severe", "warning", "question"],
+          "properties": {
+            "severe": { "type": "integer", "minimum": 0 },
+            "warning": { "type": "integer", "minimum": 0 },
+            "question": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "published": { "type": "integer", "minimum": 0 },
+        "withheld": { "type": "integer", "minimum": 0 },
+        "still_open": { "type": "integer", "minimum": 0 },
+        "rejected": { "type": "integer", "minimum": 0 },
+        "files_total": { "type": "integer", "minimum": 0 },
+        "files_reviewable": { "type": "integer", "minimum": 0 },
+        "files_reviewed": { "type": "integer", "minimum": 0 },
+        "files_excluded": { "type": "integer", "minimum": 0 },
+        "coverage_complete": { "type": "boolean" },
+        "coverage_notes": { "type": "array", "items": { "type": "string" } }
+      }
     },
-    "comments": {
+    "prior_findings": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/aggregateComment"
-      },
-      "description": "All findings, deduplicated and ordered by severity"
-    },
-    "cross_cutting_concerns": {
-      "type": "array",
-      "items": { "type": "string", "minLength": 1 },
-      "description": "Observations that span multiple agents or files"
+        "type": "object",
+        "properties": {
+          "thread_id": { "type": "string" },
+          "fingerprint": { "type": ["string", "null"] },
+          "cr_id": { "type": ["string", "null"] },
+          "path": { "type": ["string", "null"] },
+          "line": { "type": ["integer", "null"] },
+          "thread_status": { "type": "string", "enum": ["open", "discussed", "resolved"] },
+          "state": { "type": "string", "enum": ["not_found", "still_present", "accepted_risk", "reopened", "unknown"] },
+          "url": { "type": ["string", "null"] }
+        }
+      }
     },
     "coverage": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/agentCoverage"
+        "type": "object",
+        "required": ["agent", "files_assigned", "files_reviewed", "findings", "status"],
+        "properties": {
+          "agent": { "type": "string" }, "role": { "type": "string" },
+          "files_assigned": { "type": "integer" }, "files_reviewed": { "type": "integer" },
+          "files_partial": { "type": "integer" }, "files_skipped": { "type": "integer" },
+          "files_not_reported": { "type": "integer" }, "findings": { "type": "integer" },
+          "status": { "type": "string", "enum": ["ok", "partial", "failed", "missing"] }
+        }
       }
+    },
+    "excluded_files": {
+      "type": "array",
+      "items": { "type": "object", "required": ["path", "reason"], "properties": { "path": { "type": "string" }, "reason": { "type": "string" } } }
     }
   },
 
   "$defs": {
-
-    "prMetadata": {
-      "type": "object",
-      "unevaluatedProperties": false,
+    "aggregateFinding": {
+      "allOf": [{ "$ref": "review-common-schema.json#/$defs/finding" }],
+      "required": ["found_by"],
       "properties": {
-        "title":           { "type": "string" },
-        "description":     { "type": "string" },
-        "base_ref":        { "type": "string" },
-        "head_ref":        { "type": "string" },
-        "commit_sha":      { "type": "string" },
-        "pull_request_id": { "type": "string" }
-      }
-    },
-
-    "aggregateSummary": {
-      "type": "object",
-      "required": ["overall_assessment", "blocking", "counts", "files_reviewed", "files_total"],
-      "unevaluatedProperties": false,
-      "properties": {
-        "overall_assessment": {
-          "type": "string",
-          "minLength": 1
+        "found_by": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Agents that raised this finding. Stored locally, never rendered on GitHub."
         },
-        "blocking": {
-          "type": "boolean"
+        "prior_thread_id": {
+          "type": ["string", "null"],
+          "description": "Aggregator: the GraphQL thread id of an earlier review thread that describes the same issue, when the earlier comment has no fingerprint marker. The tool matches fingerprints itself."
         },
-        "counts": {
+        "fingerprint": { "type": "string", "description": "Computed: category|slug|primary_file" },
+        "verification": {
           "type": "object",
-          "required": ["severe", "warning", "question"],
-          "unevaluatedProperties": false,
+          "description": "Computed from verify/*.json",
           "properties": {
-            "severe":   { "type": "integer", "minimum": 0 },
-            "warning":  { "type": "integer", "minimum": 0 },
-            "question": { "type": "integer", "minimum": 0 }
+            "status": { "type": "string", "enum": ["verified", "rejected", "unverified", "not_required"] },
+            "method": { "type": "string" }, "note": { "type": "string" }, "by": { "type": "string" },
+            "level_before": { "$ref": "review-common-schema.json#/$defs/level" }
           }
         },
-        "suppressed_as_addressed": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Count of findings suppressed because they matched previously resolved or acknowledged review threads"
+        "publication": {
+          "type": "object",
+          "description": "Computed",
+          "properties": {
+            "status": { "type": "string", "enum": ["candidate", "published", "withheld", "still_open", "accepted_risk", "rejected"] },
+            "reason": { "type": "string" },
+            "placement": { "type": "string", "enum": ["inline", "body"] }
+          }
         },
-        "files_reviewed": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "files_total": {
-          "type": "integer",
-          "minimum": 0
+        "prior_state": {
+          "type": "object",
+          "description": "Computed when the finding matches an earlier review thread",
+          "properties": {
+            "state": { "type": "string", "enum": ["still_present", "accepted_risk", "reopened", "unknown"] },
+            "thread_url": { "type": ["string", "null"] },
+            "thread_status": { "type": "string" },
+            "severity_increased": { "type": "boolean" }
+          }
         }
-      }
-    },
-
-    "level": {
-      "type": "string",
-      "enum": ["question", "warning", "severe"]
-    },
-
-    "category": {
-      "type": "string",
-      "enum": [
-        "correctness",
-        "security",
-        "performance",
-        "maintainability",
-        "readability",
-        "style",
-        "test_gap",
-        "docs",
-        "dependency",
-        "api_contract",
-        "concurrency",
-        "error_handling"
-      ]
-    },
-
-    "confidence": {
-      "type": "string",
-      "enum": ["low", "medium", "high"]
-    },
-
-    "location": {
-      "type": "object",
-      "required": ["file_path", "start_line", "end_line"],
-      "unevaluatedProperties": false,
-      "properties": {
-        "file_path":    { "type": "string", "minLength": 1 },
-        "side":         { "type": "string", "enum": ["old", "new"], "default": "new" },
-        "start_line":   { "type": "integer", "minimum": 1 },
-        "end_line":     { "type": "integer", "minimum": 1 },
-        "start_column": { "type": "integer", "minimum": 1 },
-        "end_column":   { "type": "integer", "minimum": 1 },
-        "hunk_header":  { "type": "string" },
-        "symbol":       { "type": "string" }
-      },
-      "dependentRequired": {
-        "start_column": ["end_column"],
-        "end_column": ["start_column"]
-      }
-    },
-
-    "appliesTo": {
-      "type": "object",
-      "unevaluatedProperties": false,
-      "properties": {
-        "file_paths": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 },
-          "uniqueItems": true
-        },
-        "symbols": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 },
-          "uniqueItems": true
-        }
-      }
-    },
-
-    "aggregateCommentBase": {
-      "type": "object",
-      "required": [
-        "id",
-        "type",
-        "level",
-        "category",
-        "confidence",
-        "blocking",
-        "found_by",
-        "summary",
-        "comment"
-      ],
-      "properties": {
-        "id": {
-          "type": "string",
-          "pattern": "^CR-[0-9]{3,}$"
-        },
-        "type": {
-          "type": "string",
-          "enum": ["inline_comment", "diff_comment"]
-        },
-        "level":      { "$ref": "#/$defs/level" },
-        "category":   { "$ref": "#/$defs/category" },
-        "confidence": { "$ref": "#/$defs/confidence" },
-        "blocking":   { "type": "boolean" },
-        "found_by": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 },
-          "uniqueItems": true,
-          "description": "Agent codenames that flagged this finding (post-deduplication)"
-        },
-        "summary":         { "type": "string", "minLength": 1 },
-        "comment":         { "type": "string", "minLength": 1 },
-        "suggestion":      { "type": "string" },
-        "suggestion_consequences": {
-          "type": "string",
-          "description": "Trade-offs, side effects, or risks of following the suggestion. Include when the fix itself could cause issues."
-        },
-        "why_it_matters":  { "type": "string" },
-        "evidence": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 }
-        },
-        "references": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 }
-        },
-        "related_ids": {
-          "type": "array",
-          "items": { "type": "string", "pattern": "^CR-[0-9]{3,}$" },
-          "uniqueItems": true
-        }
-      },
-      "if": {
-        "properties": { "level": { "enum": ["warning", "severe"] } },
-        "required": ["level"]
-      },
-      "then": {
-        "required": ["suggestion", "why_it_matters"]
-      }
-    },
-
-    "inlineComment": {
-      "unevaluatedProperties": false,
-      "allOf": [{ "$ref": "#/$defs/aggregateCommentBase" }],
-      "required": ["location"],
-      "properties": {
-        "type":     { "const": "inline_comment" },
-        "location": { "$ref": "#/$defs/location" }
-      }
-    },
-
-    "diffComment": {
-      "unevaluatedProperties": false,
-      "allOf": [{ "$ref": "#/$defs/aggregateCommentBase" }],
-      "properties": {
-        "type":       { "const": "diff_comment" },
-        "applies_to": { "$ref": "#/$defs/appliesTo" }
-      }
-    },
-
-    "aggregateComment": {
-      "oneOf": [
-        { "$ref": "#/$defs/inlineComment" },
-        { "$ref": "#/$defs/diffComment" }
-      ]
-    },
-
-    "agentCoverage": {
-      "type": "object",
-      "required": ["agent", "role", "files_reviewed", "findings", "blocking"],
-      "unevaluatedProperties": false,
-      "properties": {
-        "agent":          { "type": "string", "minLength": 1 },
-        "role":           { "type": "string", "minLength": 1 },
-        "files_reviewed": { "type": "integer", "minimum": 0 },
-        "findings":       { "type": "integer", "minimum": 0 },
-        "blocking":       { "type": "integer", "minimum": 0 }
       }
     }
   }

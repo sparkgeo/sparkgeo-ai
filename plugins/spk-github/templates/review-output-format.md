@@ -1,236 +1,143 @@
-# Structured Review Output Format
+# Review Output Contract
 
-This document defines the structured JSON output format that all review agents must follow when reporting findings. It ensures consistent, machine-parseable output that the `spk-reviewer-aggregator` agent can aggregate and that developers can navigate in their IDE.
+Every review agent writes one JSON file. The tool at `${CLAUDE_PLUGIN_ROOT}/scripts/spk_review.py` validates it, merges it, counts it, and renders it. You never write counts, blocking flags, or summaries. You write findings with evidence.
 
-The canonical JSON Schema is at `${CLAUDE_PLUGIN_ROOT}/templates/review-schema.json`.
+Schemas: `review-schema.json` (specialist output), `review-aggregate-schema.json` (aggregator output), and `review-common-schema.json` (shared definitions).
 
-## Output Structure
+## What to publish
 
-Every specialist agent must return a **single JSON code block** as its complete output. No text outside the JSON block.
+A finding is published only when all three hold:
 
-```json
-{
-  "version": "1.0",
-  "agent": {
-    "name": "<agent-codename>",
-    "role": "<functional-role>"
-  },
-  "summary": {
-    "overall_assessment": "1-2 sentence summary of findings",
-    "blocking": false,
-    "counts": {
-      "severe": 0,
-      "warning": 0,
-      "question": 0
-    }
-  },
-  "comments": []
-}
-```
+1. **Concrete trigger.** You can name the input, state, or call path that causes it.
+2. **Demonstrated consequence.** You can say what breaks for users, data, or operators.
+3. **Evidence at the reviewed revision.** You quote the code at the snapshot, with path and line.
 
-## Agent Identity
+Do not raise these in the default review:
 
-Each agent uses its assigned name and role:
+| Publish | Investigate first or leave out |
+|---|---|
+| Correctness bugs this PR introduces, with a failing case | Hypothetical edge cases with no reachable trigger |
+| API, schema, migration, deployment, or config mismatches across a boundary | Broad architectural preferences with no concrete consequence |
+| Proven authorization gaps, data loss, or concurrency failures | Generic security hardening, or CVE claims with no advisory source |
+| Broken user flows or evidenced accessibility regressions | Styling preferences and unmeasured visual claims |
+| One specific missing regression test that guards a material risk, after reading existing tests | "Add tests" because no test file changed |
+| Wrong public instructions, or missing information that makes a changed API unusable | Routine docstring and wording edits |
+| A question the author must answer to decide whether a defect exists | Open-ended discussion prompts and team-awareness notices |
 
-| Codename                     | Role              |
-|------------------------------|-------------------|
-| spk-reviewer-frontend            | frontend          |
-| spk-reviewer-ui                  | ui_design         |
-| spk-reviewer-ux                  | ux_accessibility  |
-| spk-reviewer-backend-python      | backend           |
-| spk-reviewer-python-quality      | code_quality      |
-| spk-reviewer-tests               | testing           |
-| spk-reviewer-devops              | infrastructure    |
-| spk-reviewer-security            | security          |
-| spk-reviewer-database            | database          |
-| spk-reviewer-docs                | documentation     |
-| spk-reviewer-general-purpose     | general           |
-| spk-reviewer-aggregator          | aggregator        |
+Also leave out: issues that existed before this PR (`introduced_by_pr: false` findings are dropped), personal preference, and anything a configured linter or formatter reports. A second agent agreeing with you is not evidence. Reading the code is.
 
-## Comment Types
+If you find nothing that meets the bar, return an empty `findings` list. That is a correct result.
 
-### Inline Comment — File + Line Range
-
-Use `inline_comment` when the finding points to a specific location in a file. This is the preferred type because it enables direct IDE navigation.
+## Output structure
 
 ```json
 {
-  "id": "CR-001",
-  "type": "inline_comment",
-  "level": "warning",
-  "category": "correctness",
-  "confidence": "high",
-  "blocking": false,
-  "summary": "Expired tokens pass validation",
-  "comment": "This returns `valid: true` when `isExpired(token)` is true. The check is reversed.",
-  "suggestion": "Change the condition to `if (!isExpired(token))`.",
-  "suggestion_consequences": "Other callers may depend on the current behavior. Check all uses of `isExpired()` first.",
-  "why_it_matters": "Users with expired tokens can get access.",
-  "evidence": [
-    "Line 120: `if (isExpired(token)) { return { valid: true }; }`"
+  "version": "2.0",
+  "agent": { "name": "spk-reviewer-backend-python", "role": "backend" },
+  "files": [
+    { "path": "src/api/features.py", "status": "reviewed" },
+    { "path": "src/api/legacy.py", "status": "skipped", "note": "deleted file, nothing to read" }
   ],
-  "references": ["CWE-613"],
-  "location": {
-    "file_path": "src/auth/validate.ts",
-    "side": "new",
-    "start_line": 118,
-    "end_line": 124,
-    "symbol": "validateToken"
-  },
-  "dedupe_key": "correctness|token_expiry_inverted|src/auth/validate.ts|validateToken|118-124"
+  "context_unavailable": [
+    "web/src/map.ts is outside my assignment; the primary reviewer should confirm the client"
+  ],
+  "findings": [
+    {
+      "id": "CR-001",
+      "type": "inline_comment",
+      "level": "severe",
+      "category": "api_contract",
+      "confidence": "high",
+      "title": "The response rename breaks the map client",
+      "problem": "The endpoint now returns `items`, but `loadFeatures()` in web/src/map.ts still reads `features`.",
+      "consequence": "The map renders no results after deploy.",
+      "fix": "Update the client in this PR and add a contract test.",
+      "evidence": [
+        "src/api/features.py:48: return {\"items\": rows}",
+        "web/src/map.ts:112: const rows = body.features"
+      ],
+      "introduced_by_pr": true,
+      "cross_cutting": true,
+      "dedupe_key": "api_contract|response_rename_items|src/api/features.py|list_features|48-48",
+      "location": { "file_path": "src/api/features.py", "side": "new", "start_line": 48, "end_line": 48, "symbol": "list_features" }
+    }
+  ]
 }
 ```
 
-### Diff Comment — Cross-File or Overall
+Write the file to the path you are given (`<run_dir>/agents/<your-agent-name>.json`). Reply with one line: the file path, the number of files reviewed, and the number of findings. Do not paste the JSON into your reply.
 
-Use `diff_comment` for findings that span multiple files, concern the overall change, or don't map to a single location.
+## Agent identity
 
-```json
-{
-  "id": "CR-002",
-  "type": "diff_comment",
-  "level": "warning",
-  "category": "test_gap",
-  "confidence": "medium",
-  "blocking": false,
-  "summary": "No test for expired tokens",
-  "comment": "The token check changed, but no test covers expired tokens.",
-  "suggestion": "Add tests for a valid token, an expired token, and a token that expires at the current time.",
-  "why_it_matters": "A future change can break this check and no test will fail.",
-  "applies_to": {
-    "file_paths": ["src/auth/validate.ts", "test/auth/validate.test.ts"],
-    "symbols": ["validateToken"]
-  },
-  "related_ids": ["CR-001"],
-  "dedupe_key": "test_gap|missing_expiry_tests|src/auth/validate.ts|validateToken"
-}
-```
+| Agent | Role |
+|---|---|
+| spk-reviewer-primary | primary |
+| spk-reviewer-security | security |
+| spk-reviewer-frontend | frontend |
+| spk-reviewer-ui | ui_design |
+| spk-reviewer-ux | ux_accessibility |
+| spk-reviewer-backend-python | backend |
+| spk-reviewer-python-quality | code_quality |
+| spk-reviewer-tests | testing |
+| spk-reviewer-devops | infrastructure |
+| spk-reviewer-database | database |
+| spk-reviewer-docs | documentation |
 
-## Writing Style
+## Files
 
-Developers read these comments on GitHub. Write so a busy reader understands the finding in a few seconds.
+List every file you were assigned. `reviewed` means you read the whole change. `partial` means you read some of it; say what you skipped in `note`. `skipped` means you did not review it; say why. A file you do not list counts as not reviewed and makes the coverage report say "incomplete".
 
-- Use short sentences. Put one idea in each sentence.
-- Use simple, common words. Write "use", not "utilize". Write "because", not "due to the fact that".
-- Use active voice. Write "This function returns null", not "Null is returned by this function".
-- Start with the problem. Do not restate what the code does before you get to the problem.
-- Name the exact thing: the function, variable, line, or value. Do not write "this logic" or "the implementation".
-- Be direct. Do not hedge with "might potentially", "it seems that", or "consider possibly".
-- Keep `summary` under 80 characters. Make it a plain statement of the problem, not a category label.
-- Keep `comment` to 1-3 sentences. Keep `suggestion` and `why_it_matters` to 1-2 sentences each.
-- Do not repeat the same point in `comment`, `suggestion`, and `why_it_matters`. Each field adds new information.
-- Do not use filler such as "Great job, but", "It is worth noting that", or "In order to".
-- Do not use em dashes. Use a period or a comma.
-- Add a diagram to explain a concept when it makes sense.
+## Finding fields
+
+| Field | Required | Rule |
+|---|---|---|
+| `id` | yes | `CR-001`, `CR-002`, ... unique within your file. The tool renumbers later. |
+| `type` | yes | `inline_comment` when the problem sits at known lines. `diff_comment` when it spans files or concerns a missing file. |
+| `level` | yes | `severe`: must fix before merge. `warning`: should fix. `question`: the author must answer it to decide whether a defect exists. |
+| `category` | yes | One of the shared categories. `style` is never published by default. |
+| `confidence` | yes | `high`, `medium`, `low`. Diagnostic only; it is not shown on GitHub. Medium and low warnings get independent verification. |
+| `title` | yes | Under 80 characters. A plain statement of the problem, such as "Expired tokens pass validation". Not a label like "Token issue". |
+| `problem` | yes | One sentence. The trigger. Name the function, variable, value, or line. |
+| `consequence` | yes | One sentence. What goes wrong. |
+| `fix` | warning, severe | One sentence. What to change. Code is fine when short. |
+| `fix_caveat` | no | Only when the fix changes how it must be applied: deploy order, a table lock, callers to update. Omit when there is nothing to say. |
+| `evidence` | warning, severe | Quotes from the reviewed revision as `path:line: code`. At least one. |
+| `introduced_by_pr` | yes | `true` only when this PR causes the problem. |
+| `cross_cutting` | no | `true` when the finding spans files, services, or deployment steps. |
+| `dedupe_key` | yes | `category|issue_slug|primary_file[|symbol|lines]`. The first three segments identify the finding across runs and agents, so keep them stable and free of line numbers. |
+| `location` | inline only | `file_path`, `side` (`new` or `old`), `start_line`, `end_line`. `side` is required. Use `old` for deleted lines. |
+| `applies_to` | diff only | `file_paths` (at least one) and optional `symbols`. |
+| `references`, `related_ids` | no | CWE ids, docs, or related `CR-` ids. |
+
+## Writing rules
+
+The author reads your finding on GitHub in a few seconds. Write for a grade 10 reader.
+
+- `problem`, `consequence`, and `fix` together: 40 to 70 words. The tool rejects anything over 110.
+- Short sentences. One idea per sentence. Common words: "use", not "utilize".
+- Active voice. "This returns null", not "Null is returned".
+- Start with the problem. Do not describe what the code does first.
+- Name the exact thing: the function, the variable, the value. Not "this logic".
+- No hedging: no "might potentially", "it seems", "consider possibly".
+- Each field adds new information. Do not repeat the problem in the consequence or the fix.
+- No filler: no "It is worth noting", "In order to", "Great job, but".
+- No em dashes. Use a period or a comma.
 
 | Avoid | Prefer |
-|-------|--------|
+|---|---|
 | "The current implementation may potentially fail to adequately handle scenarios in which the input value is null." | "This crashes when `user` is null." |
-| "It would be advisable to consider leveraging a parameterized query to mitigate injection risk." | "Use a parameterized query. The current string format allows SQL injection." |
+| "It would be advisable to consider leveraging a parameterized query to mitigate injection risk." | "Use a parameterized query. The string format allows SQL injection." |
 
-## Field Reference
+## Reading the code
 
-### level — Finding Severity
+You get a snapshot path pinned to the PR head commit. Read callers, implementations, and tests there when you need them to establish a finding. Read the minimum that settles the question. If the snapshot is unavailable, use `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/spk_review.py fetch-file <run_dir> <path>` to fetch a file at the head commit. If you still cannot read something you need, list it in `context_unavailable` and lower your confidence. Never state a claim you could not check as if you had checked it.
 
-| Level      | Meaning                                    | blocking | suggestion required |
-|------------|--------------------------------------------|----------|---------------------|
-| `question` | Needs clarification from the author        | false    | no                  |
-| `warning`  | Should fix, not blocking merge             | false    | **yes**             |
-| `severe`   | Must fix before merge                      | true     | **yes**             |
+## How your output is used
 
-Report only findings the author can act on or must answer. Do not report praise, positive feedback, or notes that need no action. If a finding needs no action, omit it.
+1. `ingest` validates your file. A file with structural errors is recorded as a failed agent, and the review is reported as incomplete.
+2. Findings with the same `category|slug|file` key are merged across agents. The aggregator then merges findings that describe the same root cause in different words and rewrites them to the word budget.
+3. Severe findings, and warnings with medium or low confidence, go to an independent verifier that reads the snapshot.
+4. `finalize` drops rejected and pre-existing findings, computes counts and blocking from what is left, keeps every verified severe finding, and publishes up to five findings. The rest are listed by title in a collapsed section.
+5. `render` posts the explanation once: inline when the lines are in the diff, otherwise in the review body as a checklist item.
 
-### category — Finding Domain
-
-| Category          | When to use                                              |
-|-------------------|----------------------------------------------------------|
-| `correctness`     | Logic bugs, wrong behavior, edge case failures           |
-| `security`        | Vulnerabilities, secrets, injection, auth gaps           |
-| `performance`     | Hot paths, N+1 queries, unnecessary allocations          |
-| `maintainability` | Brittle coupling, poor abstraction, tech debt            |
-| `readability`     | Unclear naming, confusing structure, missing context      |
-| `style`           | Formatting, conventions, linting violations               |
-| `test_gap`        | Missing or inadequate test coverage                      |
-| `docs`            | Missing or inaccurate documentation                      |
-| `dependency`      | Package risks, version issues, unnecessary deps          |
-| `api_contract`    | Breaking changes, schema mismatches, type misalignment   |
-| `concurrency`     | Race conditions, deadlocks, async misuse                 |
-| `error_handling`  | Missing error handling, swallowed exceptions, bad UX     |
-
-### confidence
-
-- `high` — Clearly an issue based on the code
-- `medium` — Likely an issue but depends on context not visible in the diff
-- `low` — Possible concern, worth a second look
-
-### location (inline_comment only)
-
-| Field          | Required | Description                                              |
-|----------------|----------|----------------------------------------------------------|
-| `file_path`    | yes      | Relative path from repo root                             |
-| `start_line`   | yes      | First line of the relevant range                         |
-| `end_line`     | yes      | Last line (same as start_line for single-line)           |
-| `side`         | no       | `new` (default) for additions, `old` for deletions       |
-| `start_column` | no       | Column start (requires end_column)                       |
-| `end_column`   | no       | Column end (requires start_column)                       |
-| `symbol`       | no       | Function/class/variable name for IDE symbol search       |
-| `hunk_header`  | no       | The `@@` hunk header from the diff                       |
-
-### applies_to (diff_comment only)
-
-| Field        | Description                                |
-|--------------|--------------------------------------------|
-| `file_paths` | Array of files this finding relates to     |
-| `symbols`    | Array of function/class/variable names     |
-
-### Other Fields
-
-| Field            | Required       | Description                                                |
-|------------------|----------------|------------------------------------------------------------|
-| `id`             | yes            | Sequential `CR-NNN`, unique within this agent's review     |
-| `blocking`       | yes            | `true` only for severe findings                            |
-| `suggestion`     | warning/severe | How to fix the issue (can include code blocks)             |
-| `suggestion_consequences` | no    | Trade-offs, side effects, or risks of following the suggestion |
-| `why_it_matters` | warning/severe | Impact if not addressed                                    |
-| `evidence`       | no             | Array of code quotes or context supporting the finding     |
-| `references`     | no             | CWE IDs, OWASP refs, doc URLs                             |
-| `related_ids`    | no             | IDs of related findings (same or other agent reviews)      |
-| `dedupe_key`     | no             | Stable key for the aggregator to merge duplicates across agents |
-
-## Suggestion Consequences
-
-When your suggestion could itself cause problems, include a `suggestion_consequences` field describing the trade-offs, side effects, or risks. This helps the developer make an informed decision rather than blindly applying a fix that introduces a new issue.
-
-Include `suggestion_consequences` when the suggestion:
-- Could break other code (changing a function signature, renaming a column, altering an API contract)
-- Has operational impact (table locks during migration, increased memory usage, slower cold starts)
-- Involves a trade-off (security vs. usability, performance vs. readability)
-- Requires coordinated changes elsewhere (deploy ordering, config changes, downstream consumers)
-
-Omit it when the suggestion is straightforward with no meaningful side effects (e.g., fixing a typo, adding a missing test, correcting indentation).
-
-## Dedupe Key Format
-
-Use a pipe-separated string: `category|issue_slug|primary_file|symbol|line_range`
-
-Examples:
-- `correctness|token_expiry_inverted|src/auth/validate.ts|validateToken|118-124`
-- `security|sql_injection|src/api/users.py|get_user|45-52`
-- `test_gap|missing_expiry_tests|src/auth/validate.ts|validateToken`
-
-The key should be stable enough that two agents flagging the same issue produce the same (or very similar) key for the aggregator agent to merge them.
-
-## IDE Navigation Tips
-
-To help developers jump directly to findings in their IDE:
-
-1. **Always use relative paths** from the repo root (e.g., `src/auth/validate.ts`, not `/home/user/project/src/auth/validate.ts`)
-2. **Prefer inline_comment** over diff_comment when a finding maps to a specific location
-3. **Include the symbol name** — most IDEs support "Go to Symbol" search
-4. **Use tight line ranges** — point to the specific lines, not the whole function
-5. **Set start_line = end_line** for single-line findings
-
-## When to Use Each Comment Type
-
-- **inline_comment**: The finding points to specific code at a known file and line range. This is the default — use it whenever possible.
-- **diff_comment**: The finding is about a pattern across multiple files, a missing file/test that should exist, an architectural concern, or something that doesn't map to a single location.
+Confidence, attribution, and verification notes stay in the local `final.json`. They are not shown on GitHub.
