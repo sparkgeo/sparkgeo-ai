@@ -1,263 +1,98 @@
-Review a GitHub Pull Request using the multi-agent code review pipeline and post findings as a GitHub review with inline comments.
+Review a GitHub pull request with the review team and post the result as one GitHub review.
 
-## Instructions
+The deterministic steps run through `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/spk_review.py` (call it `TOOL` below). You orchestrate the agents. You do not route files, count findings, decide blocking, build the payload, or judge diff anchors yourself. The tool does those. Every tool command prints a summary; read it and act on its exit code.
 
-### Phase 1 — Preflight & Mode Selection
+## Phase 1: Preflight and mode
 
-The command supports three modes, dispatched on `$ARGUMENTS`:
+1. Run `${CLAUDE_PLUGIN_ROOT}/scripts/github-checks.sh` with no arguments. If it exits non-zero, show its stderr and stop.
 
-1. **Check GitHub CLI auth**: Run `${CLAUDE_PLUGIN_ROOT}/scripts/github-checks.sh` (with no arguments). If exit code is non-zero, report stderr to the user and **stop**.
+2. Fix `<number>` and `<owner>/<repo>` from `$ARGUMENTS`:
 
-2. **Determine mode** based on `$ARGUMENTS`. After this step you must have two values fixed for the rest of the run:
-   - `<number>` — the PR number to review.
-   - `<owner>/<repo>` — the target repository in `OWNER/REPO` form.
+   - **A PR number** (`123`): run `git rev-parse --is-inside-work-tree`. If it fails, stop with: "A bare PR number requires you to be inside the repository's local clone. Either `cd` into the repo, or pass the full PR URL instead." Then run `gh repo view --json owner,name --jq '.owner.login + "/" + .name'` for `<owner>/<repo>`.
+   - **A PR URL** (`https://github.com/foo/bar/pull/123`): parse with `^https?://github\.com/([^/]+)/([^/]+)/pull/([0-9]+)(/.*)?$`. No local clone is required. The tool makes a shallow clone for the snapshot.
+   - **No arguments**: require a local clone as above. Run `gh pr list --state open --limit 30 --json number,title,author,headRefName,updatedAt --repo <owner>/<repo>`, show the open PRs as a numbered list, ask which one to review, and wait. If there are none, stop and say so.
 
-   And one derived value:
-   - `<repo_flag>` — the literal string `--repo <owner>/<repo>` (used to make every `gh` call work from any directory). Always include this flag on `gh pr view`, `gh pr diff`, and `gh pr list` calls below.
+## Phase 2: Collect and snapshot
 
-   #### Mode A — PR number passed (e.g. `123`)
-   - Verify the current directory is inside a git/GitHub repo:
-     - Run `git rev-parse --is-inside-work-tree`. If this fails, stop and tell the user: "A bare PR number requires you to be inside the repository's local clone. Either `cd` into the repo, or pass the full PR URL instead."
-     - Run `gh repo view --json owner,name --jq '.owner.login + "/" + .name'` to get `<owner>/<repo>`. If this fails, stop with the same message.
-   - Set `<number>` from `$ARGUMENTS`.
+3. Run `TOOL collect --repo <owner>/<repo> --pr <number>`. It fetches the PR with its author, base and head SHAs, every changed file with pagination, the diff, every review thread with pagination, and the last AI review. It writes them to a run directory under `.reviews/pr<number>/<run_id>/` and prints the path as `run_dir`. Keep `run_dir` for the rest of the run.
+   - Exit code 4 means the head moved while collecting. Run `collect` again.
+   - Read the `warnings` list. Carry every warning into the final report.
 
-   #### Mode B — PR URL passed (e.g. `https://github.com/foo/bar/pull/123`)
-   - Parse the URL with this regex: `^https?://github\.com/([^/]+)/([^/]+)/pull/([0-9]+)(/.*)?$`. The captured groups give `<owner>`, `<repo>`, and `<number>`.
-   - Do **not** require a git repo in the current directory. The local `.reviews/` output directory will be created under the current working directory.
-   - **Note**: `.gitignore` / `.dockerignore` filtering in Phase 3 step 10 cannot run without the local working tree — skip that step in this mode and mention the skip in the final report.
+4. Run `TOOL snapshot <run_dir>`. It checks out the head SHA into an isolated directory: a git worktree when you are in the repo's clone, a shallow clone otherwise. It prints `path`, `method`, and `verified`.
+   - Exit code 5 means the snapshot could not be verified at the head SHA. Continue, but tell every agent `snapshot: none` and note it in the report. Agents then read pinned files with `TOOL fetch-file <run_dir> <path>`.
 
-   #### Mode C — No arguments
-   - Verify the current directory is inside a git/GitHub repo (same check as Mode A). If not, stop and tell the user: "No PR specified. Either `cd` into a repo, pass a PR number, or pass a PR URL."
-   - Run `gh repo view --json owner,name --jq '.owner.login + "/" + .name'` to get `<owner>/<repo>`.
-   - Run `gh pr list --state open --limit 30 --json number,title,author,headRefName,updatedAt` and present the open PRs to the user as a numbered list, e.g.:
-     ```
-     1. #142 — Add retry backoff to ingestion (alice, feature/retry, updated 2026-05-24)
-     2. #138 — Fix flaky scheduler test (bob, fix/scheduler, updated 2026-05-23)
-     ...
-     ```
-     Then ask the user which PR number to review and wait for their answer. Set `<number>` from their response.
-   - If `gh pr list` returns zero open PRs, stop and report that there are no open PRs to review.
+5. Run `TOOL route <run_dir>`. It writes `plan.json`: the manifest with change types and per-file reviewers, the excluded files with reasons, the agents to launch with their file lists and behaviour triggers, the repository config from `.github/spk-review.json` at the snapshot, and the convention files found. It prints the plan. Lockfiles, binaries, and generated files are routed to security only, in every mode. There is no `.gitignore` or `.dockerignore` filtering.
 
-### Phase 2 — Gather PR Data
+## Phase 3: Review
 
-Run these commands in parallel (always include `<repo_flag>` so they work from any directory):
+6. Launch every agent in `plan.json` `agents` in parallel with the Agent tool, `subagent_type` equal to the agent name. Give each agent exactly this, nothing more:
 
-4. **Get PR metadata**: Run `gh pr view <number> <repo_flag> --json number,title,body,baseRefName,headRefName,headRefOid,url` to get PR details. Save these for the aggregator schema's `pr` field.
-
-5. **Repo identity**: `<owner>/<repo>` was already established in Phase 1. Use it directly for API calls; no extra `gh repo view` is needed here.
-
-6. **Get the diff**: Run `gh pr diff <number> <repo_flag>` to get the unified diff content.
-
-7. **Get changed files with status**: Run `gh api repos/{owner}/{repo}/pulls/<number>/files --jq '.[] | .status + "\t" + .filename'`. Map GitHub statuses to change type labels: `added` → **A**, `modified` → **M**, `removed` → **D**, `renamed` → **R**, `copied` → **C**.
-
-8. **Check for existing AI review**: Run `gh api repos/{owner}/{repo}/pulls/<number>/reviews --jq '[.[] | select(.body != null) | select(.body | contains("<!-- ai-review-team -->"))] | last | .id // empty'`. Note the review ID if found — it will be handled in Phase 5.
-
-9. **Fetch addressed review threads**: Query the GitHub GraphQL API to find review threads that have already been resolved or acknowledged by the PR author. This prevents the review from re-raising issues that have already been addressed.
-
-   Run:
    ```
-   gh api graphql -f query='
-   query($owner: String!, $repo: String!, $number: Int!) {
-     repository(owner: $owner, name: $repo) {
-       pullRequest(number: $number) {
-         reviewThreads(first: 100) {
-           nodes {
-             isResolved
-             isOutdated
-             path
-             line
-             startLine
-             diffSide
-             comments(first: 20) {
-               nodes {
-                 body
-                 author { login }
-                 createdAt
-               }
-             }
-           }
-         }
-       }
-     }
-   }' -F owner=OWNER -F repo=REPO -F number=NUMBER
+   run_dir: <run_dir>
+   snapshot: <snapshot path, or none>
+   output: <run_dir>/agents/<agent-name>.json
+   PR: #<number> <title> by <author> (<head_ref> -> <base_ref>, head <head_sha>)
+   PR description: <body, trimmed to 1500 characters>
+   Conventions found at the snapshot: <list of available context_files, or none>
+   Your files (A added, M modified, D deleted, R renamed):
+   <one line per assigned file: status<TAB>path>
+   Triggers: <the agent's triggers from plan.json, or none>
+   Read plan.json for the full manifest and diff.patch for the diff. Write your JSON to the output path and reply with one line.
    ```
 
-   From the results, identify **addressed AI review threads** — threads where:
-   - The first comment matches AI review format (body contains `Found by:` with a `CR-` ID, or the severity/category pattern like `**warning** · \`category\``)
-   - AND the thread meets at least one of these conditions:
-     - **Resolved**: `isResolved` is `true`
-     - **Author replied**: The thread has a reply from the PR author (a comment other than the first one, posted by a different user than the first comment's author)
+   Do not paste the diff into the prompt. The agents read `diff.patch` from the run directory. Do not relay agent JSON yourself; agents write their own files.
 
-   For each addressed thread, extract and record:
-   - `file_path`: the thread's `path` field
-   - `line`: the thread's `line` field (end line of the comment anchor)
-   - `start_line`: the thread's `startLine` field (if present)
-   - `category`: parsed from the first comment body (the text between backticks after the severity level, e.g. `security` from `**warning** · \`security\``)
-   - `summary`: parsed from the first comment body (the bold text on the second line)
-   - `status`: `"resolved"` if `isResolved` is true, `"replied"` if the author replied but did not resolve
+7. Run `TOOL ingest <run_dir>`. It validates every agent file against the contract, records failed or missing agents, checks each agent's per-file completion against its assignment, merges exact duplicates, numbers the candidates, and writes `merged.json`.
+   - Exit code 6 means an agent failed or produced no usable file. Relaunch that agent once with the same prompt plus the validation errors it printed. Run `ingest` again. If it still fails, continue; the report will say the review is incomplete.
 
-   Save this as the **addressed findings list**. If there are no addressed threads (e.g., first review run, or no threads have been engaged with), this list is empty and no filtering will occur.
+8. Launch `spk-reviewer-aggregator` with:
 
-### Phase 3 — Multi-Agent Review Pipeline
+   ```
+   run_dir: <run_dir>
+   output: <run_dir>/aggregated.json
+   Merge candidates in merged.json by root cause, rewrite them to the contract, and link legacy threads from threads.json. Reply with one line.
+   ```
 
-10. **Filter excluded files**: Remove any files matched by `.gitignore` or `.dockerignore` from the changed file list before dispatching. **Skip this step in Mode B (PR URL)** — the local working tree is not available, so these files cannot be read. Note the skip in the final report.
+9. Run `TOOL verify-plan <run_dir>`. It validates `aggregated.json` and lists the findings that need independent verification: every severe finding, and warnings with medium or low confidence, cross-cutting warnings, and warnings that match a discussed or resolved earlier thread. It writes `verify/plan.json` with batches.
+   - Exit code 2 means `aggregated.json` is invalid. Relaunch the aggregator with the printed errors and run `verify-plan` again.
+   - If the plan has zero batches, skip step 10.
 
-11. **Dispatch**: Use the Agent tool to launch the dispatch agent (subagent_type: `spk-reviewer-dispatch`) with the full diff and changed file list. This agent analyzes the diff and creates a dispatch plan identifying which specialist agents to invoke.
-
-12. **Run specialist agents in parallel**: Based on the dispatch plan, launch the appropriate specialist review agents in parallel using the Agent tool. Each agent receives:
-   - The subset of files assigned to it
-   - The relevant diffs for those files, clearly framed as unified diff format: lines prefixed with `+` are additions, lines prefixed with `-` are deletions, and unprefixed lines are unchanged context
-   - Each file labeled with its change type: **A** = added, **M** = modified, **D** = deleted, **R** = renamed
-   - The dispatch plan context
-   - Instruction to output structured JSON conforming to `${CLAUDE_PLUGIN_ROOT}/templates/review-schema.json`
-
-   Use these agent definitions from `${CLAUDE_PLUGIN_ROOT}/agents/`:
-   - **spk-reviewer-security** — ALWAYS run this, for all files
-   - **spk-reviewer-frontend** — for .ts, .tsx, .css, vite/eslint config
-   - **spk-reviewer-ui** — for .tsx, .css, images, theme files
-   - **spk-reviewer-ux** — for .tsx, route/form/nav components
-   - **spk-reviewer-backend-python** — for .py, pyproject.toml, alembic
-   - **spk-reviewer-python-quality** — for .py files
-   - **spk-reviewer-tests** — for test/spec files, conftest, vitest config
-   - **spk-reviewer-devops** — for .tf, Dockerfile, docker-compose, .github/workflows, Makefile
-   - **spk-reviewer-database** — for alembic/, .sql, SQLAlchemy models
-   - **spk-reviewer-docs** — for .md, mkdocs.yml, openapi specs
-   - **spk-reviewer-general-purpose** — fallback for unmatched files
-
-   Each agent returns a single JSON block with `version`, `agent`, `summary`, and `comments` fields. See `${CLAUDE_PLUGIN_ROOT}/templates/review-output-format.md` for the complete schema reference.
-
-13. **Aggregate results**: Once all agents complete, use the Agent tool to launch the `spk-reviewer-aggregator` agent (from `${CLAUDE_PLUGIN_ROOT}/agents/spk-reviewer-aggregator.md`) with all agent JSON outputs. Pass the PR metadata (title, description, base_ref, head_ref, commit_sha, pull_request_id) so the aggregator output includes the `pr` field. **Also pass the addressed findings list from step 9** — the aggregator will use this to suppress findings that have already been resolved or acknowledged by the PR author. The aggregator will parse, deduplicate (using `dedupe_key`), filter addressed findings, prioritize, and synthesize into the final report.
-
-### Phase 4 — Save Review Locally
-
-14. **Save the review JSON**: Generate a timestamp using `date +%Y%m%d_%H%M%S`. Create `.reviews/` if needed. Write the aggregator JSON to `.reviews/<timestamp>_pr<number>_review.json`. The file conforms to `${CLAUDE_PLUGIN_ROOT}/templates/review-aggregate-schema.json`.
-
-### Phase 5 — Post to GitHub
-
-15. **Build the review body** (the top-level summary comment for the review). Format it as markdown:
+10. Launch one `spk-reviewer-verifier` per batch in parallel with:
 
     ```
-    <!-- ai-review-team -->
-    ## AI Code Review
-
-    **Assessment:** <overall_assessment from aggregator>
-
-    | Severe | Warning | Question |
-    |--------|---------|----------|
-    | N | N | N |
-
-    **Files reviewed:** X / Y
+    run_dir: <run_dir>
+    snapshot: <snapshot path, or none>
+    batch: <batch name>
+    output: <run_dir>/verify/<batch name>.json
+    Findings to verify: <the batch's findings copied from aggregated.json, with evidence and location>
     ```
 
-    If `suppressed_as_addressed` is greater than 0 in the aggregator summary, add after the files reviewed line:
-    ```
-    **Previously addressed:** N finding(s) suppressed (resolved or acknowledged in prior review)
-    ```
+11. Run `TOOL finalize <run_dir>`. It applies verification, drops pre-existing and style findings, computes counts and blocking from what is left, matches earlier threads by fingerprint, applies the publication budget, and writes `final.json`. The event is `COMMENT` unless a verified severe finding exists and the repository set `request_changes: true`.
+    - Exit code 2 means a finding is over the word limit or otherwise invalid. Relaunch the aggregator with the printed errors, then run `finalize` again.
 
-    If there are **cross-cutting concerns**, add:
-    ```
-    ### Cross-Cutting Concerns
-    - concern 1
-    - concern 2
-    ```
+## Phase 4: Render and post
 
-    Then add all **diff_comment** findings (general/cross-file findings) to the body. For each `diff_comment`, format as a collapsible section:
-    ```
-    <details>
-    <summary><strong>CR-NNN</strong> &middot; Level &middot; <code>category</code> — Summary text</summary>
+12. Run `TOOL render <run_dir>`. It writes `review-body.md` and `payload.json` with the head `commit_id`. Inline comments are built only for lines the diff parser finds in the hunks on the right side. Everything else goes into the body checklist.
 
-    Comment text here.
+13. Run `TOOL post <run_dir>`. It fetches the PR again and compares the head SHA. If the head moved it exits 3 without posting. Tell the user the PR changed during the review and ask whether to rerun from step 3 or post the review against the reviewed commit with `TOOL post <run_dir> --allow-stale`. On success it posts the review pinned to the reviewed commit, then marks the earlier AI review as superseded and dismisses it if it requested changes. It writes `post.json`.
+    - Exit code 7 means posting failed after one retry with inline comments folded into the body. Report the error from `post.json` and the local path of `final.json`.
 
-    > **Suggestion:** suggestion text
+14. Run `TOOL cleanup <run_dir>` to remove the snapshot.
 
-    > **Why it matters:** why_it_matters text
+## Phase 5: Report
 
-    Applies to: `file1.py`, `file2.py`
+15. Tell the user, in plain sentences:
+    - The PR URL and the review event.
+    - The headline from `final.json` and the published findings as a short list: title and location.
+    - How many findings were withheld, still open from earlier reviews, or rejected, with the local path of `final.json` for the details.
+    - Whether coverage is complete. If not, every coverage note.
+    - Every warning from `collect.json` and `snapshot.json`.
 
-    <sub>Found by: agent1, agent2</sub>
-    </details>
-    ```
+## Rules
 
-    Then add a **coverage table**:
-    ```
-    ### Agent Coverage
-    | Agent | Role | Files | Findings | Blocking |
-    |-------|------|-------|----------|----------|
-    | spk-reviewer-security | security | 5 | 2 | 0 |
-    ```
-
-    End with:
-    ```
-    <sub>Generated by AI Review Team</sub>
-    ```
-
-    **Character limit**: If the body exceeds 65,000 characters, truncate the diff_comment sections (keeping the summary table and coverage) and append a note: "Some findings were omitted due to GitHub's character limit. See the full review in the local JSON file."
-
-16. **Build inline review comments**: For each `inline_comment` from the aggregator output, create a review comment object:
-
-    - `path`: the `location.file_path`
-    - `line`: the `location.end_line` (GitHub uses this as the comment anchor)
-    - `start_line`: the `location.start_line` — only include if `start_line != end_line` (multi-line comment)
-    - `side`: map `location.side` — `"new"` or default → `"RIGHT"`, `"old"` → `"LEFT"`
-    - `start_side`: same mapping as `side` — only include when `start_line` is included
-    - `body`: format the comment as markdown:
-      ```
-      **Level** · `category` · confidence: X
-
-      **Summary text**
-
-      Comment text here.
-
-      > **Suggestion:** suggestion text
-
-      > **Why it matters:** why_it_matters text
-
-      <sub>Found by: agent1, agent2 · CR-NNN</sub>
-      ```
-
-    **Important — line validation**: Inline comments can only reference lines that appear in the PR diff (added lines, removed lines, or context lines within diff hunks). Parse the diff from step 6 to determine valid line ranges for each file. For any `inline_comment` whose line range falls outside the diff hunks for that file, do NOT include it as an inline comment — instead fold it into the review body as an additional finding (formatted like the diff_comments above).
-
-    **Comment limit**: If there are more than 50 inline comments, keep only the top 50 sorted by severity (severe > warning > question), then by confidence (high > medium > low). Fold the remaining comments into the review body. This stays well within GitHub's rate limits.
-
-17. **Determine the review event**:
-    - If the aggregator `summary.blocking` is `true` → `"REQUEST_CHANGES"`
-    - Otherwise → `"COMMENT"`
-
-18. **Dismiss existing AI review** (if one was found in step 8): Run `gh api repos/{owner}/{repo}/pulls/<number>/reviews/<review_id>/dismissals --method PUT -f message="Superseded by updated AI review"`. If this fails (e.g., insufficient permissions), continue anyway — the new review will still be posted.
-
-19. **Submit the review**: Build a JSON payload file containing:
-    ```json
-    {
-      "body": "<review body from step 15>",
-      "event": "<event from step 17>",
-      "comments": [<inline comment objects from step 16>]
-    }
-    ```
-    Write this to a temporary file (e.g., `/tmp/ai-review-payload.json`). Then submit:
-    ```
-    gh api repos/{owner}/{repo}/pulls/<number>/reviews --method POST --input /tmp/ai-review-payload.json
-    ```
-
-    **Error handling**: If the API call fails due to invalid inline comment positions (lines not in the diff), remove the offending comments from the payload, fold them into the review body, and retry. If it fails for other reasons, report the error to the user and note that the review JSON was saved locally.
-
-    Clean up the temporary payload file after submission.
-
-### Phase 6 — Report
-
-20. **Present results**: Output a summary to the user including:
-    - The PR URL
-    - The review event type (COMMENT or REQUEST_CHANGES)
-    - Count of inline comments posted vs. total findings
-    - Count of findings by severity
-    - Count of findings suppressed due to previously addressed threads (if any)
-    - The local path where the JSON review was saved
-    - Any warnings (e.g., comments that couldn't be posted inline, character limit truncation)
-
-## Notes
-
-- **File exclusions**: Files matched by `.gitignore` or `.dockerignore` must NOT be reviewed by any agent unless the user explicitly includes them.
-- Always run `spk-reviewer-security` regardless of file types.
-- Launch as many specialist agents in parallel as possible for speed.
-- The `$ARGUMENTS` variable contains any arguments the user passed: a PR number, a PR URL, or empty (the three modes in Phase 1 step 2).
-- Do not post praise or positive feedback anywhere in the review — not as inline comments and not in the review body. Report only actionable findings.
-- Post comments in short, plain sentences. Follow the Writing Style rules in `${CLAUDE_PLUGIN_ROOT}/templates/review-output-format.md`.
+- `$ARGUMENTS` is a PR number, a PR URL, or empty.
+- Agents write their own JSON files. Never paste the diff or agent JSON into prompts or replies.
+- Never edit `final.json`, `payload.json`, or the review body by hand. If something is wrong, fix the input and rerun the tool step.
+- Never post without `TOOL post`. It is the only step that checks the head SHA and sets `commit_id`.
+- Do not post praise. The tool renders only published findings.
+- Add `.reviews/` to the repository's `.gitignore` if it is not there, and say so.
