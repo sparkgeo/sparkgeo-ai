@@ -18,6 +18,7 @@ The review runs in two layers. A Python tool does every step that must be determ
 | finalize | tool | Drops pre-existing and style findings, computes counts and blocking, matches earlier threads by fingerprint, applies the publication budget. |
 | render | tool | One explanation per finding: inline when the diff has the line, otherwise a checklist item in the body. Diagnostics go in a collapsed section. |
 | post | tool | Rechecks the head SHA, posts with `commit_id`, then supersedes the earlier review. |
+| usage | tool | Sums token usage per agent from the session transcripts and reports the elapsed time. |
 
 ### What gets published
 
@@ -86,7 +87,26 @@ Model choices for the pre-existing agents were kept. Change them after comparing
 
 ## Local output
 
-Each run writes `.reviews/pr<number>/<run_id>/`. `final.json` holds every finding with confidence, attribution, verification notes, publication status, and the reason for each rejection. `review-body.md` and `payload.json` are what was posted. Add `.reviews/` to `.gitignore`.
+Each run writes `.reviews/pr<number>/<run_id>/`. `final.json` holds every finding with confidence, attribution, verification notes, publication status, and the reason for each rejection. `review-body.md` and `payload.json` are what was posted. `usage.json` holds the token usage and timing. Add `.reviews/` to `.gitignore`.
+
+## Token usage and elapsed time
+
+After the review is posted, `spk_review.py usage <run_dir>` prints a table with one row per agent launched for the run, one row for the orchestrating session, and totals:
+
+```
+Token usage for run 20261001_120103_abc1234
+agent                       model             calls   input  cache write   cache read   output       total     time
+spk-reviewer-primary        claude-opus-5-5      27      54       83,722    1,029,354   13,870   1,127,000   4m 12s
+...
+all agents (9)                                  118     312      640,210    5,102,448   48,117   5,791,087        -
+everything                                      158     420      702,113    6,331,990   61,004   7,095,527        -
+
+Elapsed: 14m 12s (collect 2026-10-01T12:01:03+00:00 to 2026-10-01T12:15:15+00:00)
+```
+
+The numbers come from the API usage recorded in Claude Code's session transcripts under `~/.claude/projects/`. Every API call is counted once, even though the transcript logs one line per content block. Agents are matched to the run by the `run_dir` in their prompt, so other agents in the same session are ignored. `total` is input plus cache write plus cache read plus output; cache reads dominate because every call resends the agent's context.
+
+The session id comes from `CLAUDE_CODE_SESSION_ID`, which Claude Code sets for shell commands. Pass `--session-id` and `--projects-dir` to run it by hand. The transcript format is internal to Claude Code and may change; when it cannot be read the command prints `usage unavailable` and exits 0 so the review is not affected. The report is also written to `usage.json` in the run directory.
 
 ## Tests
 

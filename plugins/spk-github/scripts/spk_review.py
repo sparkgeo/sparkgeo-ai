@@ -19,6 +19,7 @@ Commands
   render       Build the review body and the GitHub payload.
   post         Recheck the head SHA, post the review, supersede the old one.
   cleanup      Remove the snapshot.
+  usage        Sum token usage and elapsed time for the run from the session transcripts.
   validate     Validate one JSON file against the specialist or aggregate contract.
 """
 from __future__ import annotations
@@ -1662,6 +1663,216 @@ def cmd_post(a: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# usage
+# ---------------------------------------------------------------------------
+
+USAGE_FIELDS = ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens", "output_tokens")
+USAGE_LABELS = {"input_tokens": "input", "cache_creation_input_tokens": "cache write",
+                "cache_read_input_tokens": "cache read", "output_tokens": "output"}
+PLUGIN_PREFIX = "spk-github:"
+
+
+def parse_ts(value: str | None) -> dt.datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt.timezone.utc)
+    return parsed
+
+
+def format_duration(seconds: float | None) -> str:
+    if seconds is None:
+        return "-"
+    seconds = int(round(seconds))
+    hours, rem = divmod(seconds, 3600)
+    minutes, secs = divmod(rem, 60)
+    if hours:
+        return f"{hours}h {minutes:02d}m {secs:02d}s"
+    if minutes:
+        return f"{minutes}m {secs:02d}s"
+    return f"{secs}s"
+
+
+def iter_transcript(path: Path):
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                yield json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+
+def message_text(message: dict | None) -> str:
+    content = (message or {}).get("content")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "\n".join(b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text")
+    return ""
+
+
+def transcript_usage(path: Path, *, since: dt.datetime | None = None, sidechain: bool | None = None) -> dict:
+    """Sum API usage recorded in one transcript.
+
+    Claude Code writes one line per content block of an API response, each
+    carrying the same usage object, so responses are deduplicated by message id
+    before summing. Entries older than `since` are skipped.
+    """
+    responses: dict[str, dict] = {}
+    models: set[str] = set()
+    first: dt.datetime | None = None
+    last: dt.datetime | None = None
+    for entry in iter_transcript(path):
+        ts = parse_ts(entry.get("timestamp"))
+        if since and ts and ts < since:
+            continue
+        if sidechain is not None and bool(entry.get("isSidechain")) != sidechain:
+            continue
+        if ts:
+            first = ts if first is None or ts < first else first
+            last = ts if last is None or ts > last else last
+        if entry.get("type") != "assistant":
+            continue
+        message = entry.get("message") or {}
+        usage = message.get("usage")
+        if not isinstance(usage, dict):
+            continue
+        key = message.get("id") or entry.get("requestId") or entry.get("uuid")
+        responses[key] = usage
+        if message.get("model"):
+            models.add(message["model"])
+    totals = {field: sum(int(u.get(field) or 0) for u in responses.values()) for field in USAGE_FIELDS}
+    totals["total_tokens"] = sum(totals.values())
+    duration = (last - first).total_seconds() if first and last else None
+    return {
+        "calls": len(responses), "models": sorted(models),
+        "first_at": first.isoformat() if first else None,
+        "last_at": last.isoformat() if last else None,
+        "duration_seconds": duration, **totals,
+    }
+
+
+def agent_label(transcript: Path, prompt: str) -> str:
+    meta_path = transcript.with_name(transcript.name[:-len(".jsonl")] + ".meta.json")
+    name = None
+    if meta_path.exists():
+        try:
+            name = (read_json(meta_path) or {}).get("agentType")
+        except (OSError, ValueError):
+            name = None
+    if not name:
+        m = re.search(r"output:\s*\S+/agents/([A-Za-z0-9_.-]+)\.json", prompt)
+        name = m.group(1) if m else None
+    if not name:
+        name = "spk-reviewer-verifier" if re.search(r"^batch:", prompt, re.M) else "unknown-agent"
+    if name.startswith(PLUGIN_PREFIX):
+        name = name[len(PLUGIN_PREFIX):]
+    batch = re.search(r"^batch:\s*(\S+)", prompt, re.M)
+    if batch and "verifier" in name:
+        name = f"{name} ({batch.group(1)})"
+    return name
+
+
+def find_session_files(projects_dir: Path, session_id: str) -> tuple[Path | None, Path | None]:
+    main_transcript = next(iter(sorted(projects_dir.glob(f"*/{session_id}.jsonl"))), None)
+    subagent_dir = next(iter(sorted(projects_dir.glob(f"*/{session_id}/subagents"))), None)
+    return main_transcript, subagent_dir
+
+
+def collect_usage(run_dir: Path, projects_dir: Path, session_id: str, *, now: dt.datetime | None = None) -> dict:
+    collect = read_json(run_dir / "collect.json")
+    run_id = collect["run_id"]
+    started = parse_ts(collect.get("collected_at"))
+    finished = now or dt.datetime.now(dt.timezone.utc)
+    report = {
+        "run_id": run_id, "session_id": session_id,
+        "started_at": started.isoformat() if started else None,
+        "finished_at": finished.replace(microsecond=0).isoformat(),
+        "elapsed_seconds": (finished - started).total_seconds() if started else None,
+        "agents": [], "orchestrator": None, "warnings": [],
+    }
+    main_transcript, subagent_dir = find_session_files(projects_dir, session_id)
+    if subagent_dir is None:
+        report["warnings"].append(f"no subagent transcripts found for session {session_id} under {projects_dir}")
+    else:
+        for transcript in sorted(subagent_dir.glob("agent-*.jsonl")):
+            first_user = next((e for e in iter_transcript(transcript) if e.get("type") == "user"), None)
+            prompt = message_text((first_user or {}).get("message"))
+            if run_id not in prompt:
+                continue
+            usage = transcript_usage(transcript)
+            report["agents"].append({"agent": agent_label(transcript, prompt), "transcript": str(transcript), **usage})
+    if main_transcript is None:
+        report["warnings"].append(f"no session transcript found for session {session_id} under {projects_dir}")
+    else:
+        usage = transcript_usage(main_transcript, since=started, sidechain=False)
+        report["orchestrator"] = {"agent": "orchestrator", "transcript": str(main_transcript), **usage}
+    agents_total = {field: sum(a[field] for a in report["agents"]) for field in (*USAGE_FIELDS, "total_tokens")}
+    agents_total["calls"] = sum(a["calls"] for a in report["agents"])
+    report["agents_total"] = agents_total
+    grand = dict(agents_total)
+    if report["orchestrator"]:
+        for field in (*USAGE_FIELDS, "total_tokens", "calls"):
+            grand[field] += report["orchestrator"][field]
+    report["grand_total"] = grand
+    if not report["agents"]:
+        report["warnings"].append(f"no agent transcript mentions run {run_id}; agent usage is unknown")
+    return report
+
+
+def render_usage(report: dict) -> str:
+    rows = list(report["agents"]) + ([report["orchestrator"]] if report["orchestrator"] else [])
+    name_width = max([len("everything")] + [len(r["agent"]) for r in rows]) + 2
+    model_width = max([len("model")] + [len(", ".join(r["models"])) for r in rows]) + 2
+    header = (f"{'agent':<{name_width}}{'model':<{model_width}}{'calls':>6}"
+              + "".join(f"{USAGE_LABELS[f]:>13}" for f in USAGE_FIELDS)
+              + f"{'total':>13}{'time':>10}")
+
+    def line(label: str, model: str, data: dict, duration: float | None) -> str:
+        return (f"{label:<{name_width}}{model:<{model_width}}{data['calls']:>6}"
+                + "".join(f"{data[f]:>13,}" for f in USAGE_FIELDS)
+                + f"{data['total_tokens']:>13,}{format_duration(duration):>10}")
+
+    out = [f"Token usage for run {report['run_id']}", header, "-" * len(header)]
+    for r in rows:
+        out.append(line(r["agent"], ", ".join(r["models"]), r, r.get("duration_seconds")))
+    out.append("-" * len(header))
+    out.append(line(f"all agents ({len(report['agents'])})", "", report["agents_total"], None))
+    if report["orchestrator"]:
+        out.append(line("everything", "", report["grand_total"], None))
+    out.append("")
+    out.append(f"Elapsed: {format_duration(report['elapsed_seconds'])} "
+               f"(collect {report['started_at'] or '?'} to {report['finished_at']})")
+    for w in report["warnings"]:
+        out.append(f"warning: {w}")
+    return "\n".join(out)
+
+
+def cmd_usage(a: argparse.Namespace) -> int:
+    run_dir = Path(a.run_dir)
+    session_id = a.session_id or os.environ.get("CLAUDE_CODE_SESSION_ID")
+    if not session_id:
+        print("usage unavailable: CLAUDE_CODE_SESSION_ID is not set and --session-id was not given")
+        return 0
+    projects_dir = Path(a.projects_dir) if a.projects_dir else Path.home() / ".claude" / "projects"
+    try:
+        report = collect_usage(run_dir, projects_dir, session_id)
+    except (OSError, ValueError, KeyError) as exc:
+        print(f"usage unavailable: {exc}")
+        return 0
+    write_json(run_dir / "usage.json", report)
+    print(render_usage(report))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="spk_review", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -1693,6 +1904,12 @@ def main(argv: list[str] | None = None) -> int:
     po.add_argument("--allow-stale", action="store_true")
     po.add_argument("--dry-run", action="store_true")
     po.set_defaults(func=cmd_post)
+
+    u = sub.add_parser("usage", help="sum token usage and elapsed time for the run")
+    u.add_argument("run_dir")
+    u.add_argument("--session-id", help="Claude Code session id (default: $CLAUDE_CODE_SESSION_ID)")
+    u.add_argument("--projects-dir", help="transcript root (default: ~/.claude/projects)")
+    u.set_defaults(func=cmd_usage)
 
     v = sub.add_parser("validate", help="validate a JSON file")
     v.add_argument("file")

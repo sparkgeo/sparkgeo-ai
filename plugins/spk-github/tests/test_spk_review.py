@@ -498,3 +498,123 @@ class RenderTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class UsageTests(unittest.TestCase):
+    """Token usage is summed from the session transcripts, deduplicated by API response."""
+
+    def _entry(self, kind, ts, usage=None, msg_id=None, sidechain=False, model="claude-x", text="", agent=None):
+        import json
+        entry = {"type": kind, "timestamp": ts, "isSidechain": sidechain, "uuid": f"u-{ts}-{msg_id}"}
+        if agent:
+            entry["agentId"] = agent
+        message = {"role": "assistant" if kind == "assistant" else "user"}
+        if kind == "assistant":
+            message.update({"id": msg_id, "model": model, "usage": usage, "content": [{"type": "text", "text": text}]})
+        else:
+            message["content"] = text
+        entry["message"] = message
+        return json.dumps(entry)
+
+    def _usage(self, inp, write, read, out):
+        return {"input_tokens": inp, "cache_creation_input_tokens": write,
+                "cache_read_input_tokens": read, "output_tokens": out}
+
+    def _make_session(self, root: Path, run_id: str):
+        import json
+        session = "sess-1"
+        proj = root / "projects" / "-home-x-repo"
+        sub = proj / session / "subagents"
+        sub.mkdir(parents=True)
+        # Main transcript: one response before the run (ignored), one after, logged twice (two content blocks).
+        main_lines = [
+            self._entry("assistant", "2026-10-01T10:00:00.000Z", self._usage(5, 5, 5, 5), "m0"),
+            self._entry("user", "2026-10-01T10:05:00.000Z", text="/spk-pr 12"),
+            self._entry("assistant", "2026-10-01T10:05:10.000Z", self._usage(1, 100, 1000, 10), "m1", model="claude-fable"),
+            self._entry("assistant", "2026-10-01T10:05:10.100Z", self._usage(1, 100, 1000, 10), "m1", model="claude-fable"),
+            self._entry("assistant", "2026-10-01T10:06:00.000Z", self._usage(2, 0, 2000, 20), "m2", model="claude-fable"),
+        ]
+        (proj / f"{session}.jsonl").write_text("\n".join(main_lines) + "\n")
+        # A reviewer for this run: two API calls, the first logged on three lines.
+        primary = [
+            self._entry("user", "2026-10-01T10:05:20.000Z", text=f"run_dir: .reviews/pr12/{run_id}\noutput: .reviews/pr12/{run_id}/agents/spk-reviewer-primary.json", agent="a1"),
+            self._entry("assistant", "2026-10-01T10:05:25.000Z", self._usage(3, 300, 3000, 30), "p1", model="claude-opus", agent="a1"),
+            self._entry("assistant", "2026-10-01T10:05:25.000Z", self._usage(3, 300, 3000, 30), "p1", model="claude-opus", agent="a1"),
+            self._entry("assistant", "2026-10-01T10:05:25.000Z", self._usage(3, 300, 3000, 30), "p1", model="claude-opus", agent="a1"),
+            self._entry("assistant", "2026-10-01T10:07:25.000Z", self._usage(4, 0, 4000, 40), "p2", model="claude-opus", agent="a1"),
+        ]
+        (sub / "agent-a1.jsonl").write_text("\n".join(primary) + "\n")
+        (sub / "agent-a1.meta.json").write_text(json.dumps({"agentType": "spk-github:spk-reviewer-primary"}))
+        # A verifier with no meta file: the label comes from the prompt.
+        verifier = [
+            self._entry("user", "2026-10-01T10:08:00.000Z", text=f"run_dir: .reviews/pr12/{run_id}\nbatch: batch-1\noutput: .reviews/pr12/{run_id}/verify/batch-1.json", agent="a2"),
+            self._entry("assistant", "2026-10-01T10:08:30.000Z", self._usage(1, 10, 100, 1), "v1", model="claude-opus", agent="a2"),
+        ]
+        (sub / "agent-a2.jsonl").write_text("\n".join(verifier) + "\n")
+        # An agent from another run in the same session: ignored.
+        other = [
+            self._entry("user", "2026-10-01T10:09:00.000Z", text="run_dir: .reviews/pr99/other_run", agent="a3"),
+            self._entry("assistant", "2026-10-01T10:09:30.000Z", self._usage(9, 9, 9, 9), "o1", agent="a3"),
+        ]
+        (sub / "agent-a3.jsonl").write_text("\n".join(other) + "\n")
+        return session, root / "projects"
+
+    def test_usage_sums_run_agents_and_orchestrator_since_collect(self):
+        import datetime as dt
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run_id = "20261001_100500_abc1234"
+            run_dir = root / ".reviews" / "pr12" / run_id
+            run_dir.mkdir(parents=True)
+            spk.write_json(run_dir / "collect.json", {"run_id": run_id, "collected_at": "2026-10-01T10:05:05+00:00"})
+            session, projects = self._make_session(root, run_id)
+            now = dt.datetime(2026, 10, 1, 10, 20, 5, tzinfo=dt.timezone.utc)
+            report = spk.collect_usage(run_dir, projects, session, now=now)
+
+            self.assertEqual([a["agent"] for a in report["agents"]],
+                             ["spk-reviewer-primary", "spk-reviewer-verifier (batch-1)"])
+            primary = report["agents"][0]
+            self.assertEqual(primary["calls"], 2)
+            self.assertEqual(primary["cache_read_input_tokens"], 7000)
+            self.assertEqual(primary["total_tokens"], 3 + 300 + 3000 + 30 + 4 + 4000 + 40)
+            self.assertEqual(primary["models"], ["claude-opus"])
+            self.assertEqual(primary["duration_seconds"], 125.0)
+
+            orch = report["orchestrator"]
+            self.assertEqual(orch["calls"], 2)
+            self.assertEqual(orch["total_tokens"], 1 + 100 + 1000 + 10 + 2 + 2000 + 20)
+
+            self.assertEqual(report["agents_total"]["total_tokens"], primary["total_tokens"] + 112)
+            self.assertEqual(report["grand_total"]["total_tokens"],
+                             report["agents_total"]["total_tokens"] + orch["total_tokens"])
+            self.assertEqual(report["elapsed_seconds"], 900.0)
+            self.assertEqual(report["warnings"], [])
+
+            text = spk.render_usage(report)
+            self.assertIn("spk-reviewer-primary", text)
+            self.assertIn("all agents (2)", text)
+            self.assertIn("Elapsed: 15m 00s", text)
+
+    def test_usage_is_soft_when_transcripts_are_missing(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run_dir = root / "run"
+            run_dir.mkdir()
+            spk.write_json(run_dir / "collect.json", {"run_id": "r1", "collected_at": "2026-10-01T10:05:05+00:00"})
+            (root / "projects").mkdir()
+            report = spk.collect_usage(run_dir, root / "projects", "missing")
+            self.assertEqual(report["agents"], [])
+            self.assertIsNone(report["orchestrator"])
+            self.assertEqual(len(report["warnings"]), 3)
+            self.assertIn("warning:", spk.render_usage(report))
+            rc = spk.main(["usage", str(run_dir), "--session-id", "missing", "--projects-dir", str(root / "projects")])
+            self.assertEqual(rc, 0)
+            self.assertTrue((run_dir / "usage.json").exists())
+
+    def test_format_duration(self):
+        self.assertEqual(spk.format_duration(None), "-")
+        self.assertEqual(spk.format_duration(42), "42s")
+        self.assertEqual(spk.format_duration(125), "2m 05s")
+        self.assertEqual(spk.format_duration(3725), "1h 02m 05s")

@@ -79,14 +79,17 @@ The deterministic steps run through `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/spk_r
 
 14. Run `TOOL cleanup <run_dir>` to remove the snapshot.
 
+15. Run `TOOL usage <run_dir>`. It reads this session's transcripts, sums the API token usage of every agent launched for this run and your own share since collect, and measures the elapsed time. It prints a table and writes `usage.json`. It never fails the review; if it prints `usage unavailable` or a warning, carry that line into the report.
+
 ## Phase 5: Report
 
-15. Tell the user, in plain sentences:
+16. Tell the user, in plain sentences:
     - The PR URL and the review event.
     - The headline from `final.json` and the published findings as a short list: title and location.
     - How many findings were withheld, still open from earlier reviews, or rejected, with the local path of `final.json` for the details.
     - Whether coverage is complete. If not, every coverage note.
     - Every warning from `collect.json` and `snapshot.json`.
+    - The token usage table and the elapsed time exactly as `TOOL usage` printed them, in a code block, as the last part of the report. Do not total or round the numbers yourself.
 
 ## Rules
 
