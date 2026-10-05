@@ -1,0 +1,93 @@
+# spk-code-review repository configuration
+#
+# Copy this file to `.github/spk-code-review.yaml` in the repository you want
+# to review. Every key is optional. Missing keys use the defaults shown here.
+
+review:
+  # Documents that describe the architecture. Directories are read recursively.
+  architecture:
+    documents:
+      - ARCHITECTURE.md
+      - docs/architecture/
+      - docs/adr/
+
+  # Coding standards and contribution rules.
+  standards:
+    - CONTRIBUTING.md
+    - STYLE.md
+    - CLAUDE.md
+
+  # Paths the pipeline never reviews (generated code, vendored code, fixtures).
+  exclude:
+    - "**/*.min.js"
+    - "**/generated/**"
+    - "vendor/**"
+
+  risk:
+    levels:
+      low:
+        human_review_required: false
+        auto_merge_allowed: false # Set to true only after the team trusts the pipeline on this repo.
+      medium:
+        human_review_required: true
+        minimum_human_reviewers: 1
+      high:
+        human_review_required: true
+        specialist_review_required: true
+
+    # Domain rules. `level` is a floor: the classifier may go higher, never lower.
+    rules:
+      authentication:
+        level: high
+        require_human: true
+      authorization:
+        level: high
+        require_human: true
+      cryptography:
+        level: high
+        require_human: true
+      iam:
+        level: high
+        require_human: true
+        required_agents:
+          - security
+          - infrastructure
+      migrations:
+        level: high
+        required_agents:
+          - correctness
+          - performance-ops
+          - migration
+
+    # Path rules. Any change that matches a glob gets at least this level.
+    paths:
+      - glob: "src/auth/**"
+        level: high
+      - glob: "infra/**"
+        level: high
+      - glob: "docs/**"
+        level: low
+
+  # Extra routing. Keys are file globs, values are agent short names that
+  # must run when a matching file changes.
+  routing:
+    "alembic/versions/**": [migration]
+    "openapi.*": [api-compatibility, docs]
+
+  # Maximum findings posted per severity. Extra findings are folded into
+  # the review summary. Blockers are never limited.
+  comment_budget:
+    issues: 10
+    suggestions: 5
+    nits: 0
+
+  # CI checks that must pass before the merge gate can allow auto-approval.
+  # Names match the check names shown by `gh pr checks`.
+  required_checks:
+    - tests
+    - lint
+    - typecheck
+
+  # Allow the pipeline to submit an APPROVE review when the merge gate passes.
+  # When false, the pipeline posts COMMENT instead of APPROVE.
+  allow_approve: false

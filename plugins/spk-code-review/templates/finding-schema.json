@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "finding-schema.json",
+  "title": "spk-code-review specialist output",
+  "description": "Output produced by every specialist reviewer in the spk-code-review pipeline.",
+  "type": "object",
+  "required": ["agent", "summary", "findings"],
+  "additionalProperties": false,
+  "properties": {
+    "agent": { "$ref": "#/$defs/agentName" },
+    "files_reviewed": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "description": "1-2 sentences: what was checked and what was found."
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    },
+    "positive_observations": {
+      "type": "array",
+      "maxItems": 2,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "questions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/question" }
+    }
+  },
+
+  "$defs": {
+    "agentName": {
+      "type": "string",
+      "enum": [
+        "spk-cr-architecture",
+        "spk-cr-correctness",
+        "spk-cr-security",
+        "spk-cr-tests",
+        "spk-cr-maintainability",
+        "spk-cr-performance-ops",
+        "spk-cr-migration",
+        "spk-cr-infrastructure",
+        "spk-cr-api-compatibility",
+        "spk-cr-dependency",
+        "spk-cr-docs"
+      ]
+    },
+
+    "severity": {
+      "type": "string",
+      "enum": ["nit", "suggestion", "issue", "blocker"],
+      "description": "Impact if the finding is real, from least to most severe."
+    },
+
+    "confidence": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "description": "How sure the reviewer is that the finding is real."
+    },
+
+    "finding": {
+      "type": "object",
+      "required": [
+        "id",
+        "agent",
+        "severity",
+        "confidence",
+        "category",
+        "file",
+        "title",
+        "description",
+        "impact",
+        "evidence",
+        "recommendation",
+        "verification_needed",
+        "dedupe_key"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z-]+-[0-9]+$",
+          "description": "Unique within one agent output, e.g. correctness-1."
+        },
+        "agent": { "$ref": "#/$defs/agentName" },
+        "severity": { "$ref": "#/$defs/severity" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "category": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "snake_case slug, e.g. idempotency, authorization, n_plus_one."
+        },
+        "file": {
+          "type": ["string", "null"],
+          "description": "Path relative to repo root. null for a PR-wide finding."
+        },
+        "related_files": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "start_line": { "type": "integer", "minimum": 1 },
+        "end_line": { "type": "integer", "minimum": 1 },
+        "side": {
+          "type": "string",
+          "enum": ["new", "old"],
+          "default": "new"
+        },
+        "symbol": { "type": "string" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "description": { "type": "string", "minLength": 1 },
+        "impact": { "type": "string", "minLength": 1 },
+        "failure_scenario": {
+          "type": "string",
+          "description": "Concrete inputs or state that lead to the wrong result."
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "assumptions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Assumptions the finding depends on. Required to be non-empty for medium confidence."
+        },
+        "recommendation": { "type": "string", "minLength": 1 },
+        "references": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "CWE IDs, OWASP refs, ADRs, docs, or URLs."
+        },
+        "verification_needed": { "type": "boolean" },
+        "out_of_scope": {
+          "type": "boolean",
+          "default": false,
+          "description": "true when the finding is outside this agent's mission."
+        },
+        "dedupe_key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "category|issue-slug|file|symbol"
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "file": { "type": "string" } }, "required": ["file"] },
+          "then": { "required": ["start_line", "end_line"] }
+        },
+        {
+          "if": { "properties": { "confidence": { "const": "medium" } }, "required": ["confidence"] },
+          "then": { "required": ["assumptions"], "properties": { "assumptions": { "minItems": 1 } } }
+        },
+        {
+          "if": { "properties": { "severity": { "const": "blocker" } }, "required": ["severity"] },
+          "then": { "properties": { "verification_needed": { "const": true } } }
+        }
+      ]
+    },
+
+    "question": {
+      "type": "object",
+      "required": ["question"],
+      "additionalProperties": false,
+      "properties": {
+        "question": { "type": "string", "minLength": 1 },
+        "file": { "type": "string" },
+        "start_line": { "type": "integer", "minimum": 1 },
+        "end_line": { "type": "integer", "minimum": 1 },
+        "why": { "type": "string" }
+      }
+    }
+  }
+}

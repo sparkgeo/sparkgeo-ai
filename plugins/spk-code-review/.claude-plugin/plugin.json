@@ -1,0 +1,8 @@
+{
+  "name": "spk-code-review",
+  "description": "Sparkgeo experimental code review: a risk-routed, multi-agent pull request review pipeline with context building, risk classification, specialist reviewers, finding verification, and one synthesized GitHub review.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Dustin Sampson"
+  }
+}

@@ -30,6 +30,7 @@ Or install a specific plugin directly:
 | [spk-docs](plugins/spk-docs/) | The `spk-plain-docs` skill: a house style for technical documentation, derived from ASD-STE100 Simplified Technical English. |
 | [spk-python](plugins/spk-python/) | Agents for Python development, starting with the `spk-fast-api` agent for designing, building, and reviewing production-ready FastAPI applications. |
 | [spk-design](plugins/spk-design/) | Software design workflows: the `create-adr` skill scaffolds an Architectural Decision Record on its own branch with a draft PR, and the `review-adr` skill reviews an ADR against the repo, interviewing the author when it is incomplete. |
+| [spk-code-review](plugins/spk-code-review/) | Experimental: a risk-routed, multi-agent PR review pipeline (`/spk-code-review`). It builds context, classifies risk, routes to specialist reviewers, verifies severe findings, and posts one synthesized GitHub review. |
 
 ## Repository layout
 

@@ -1,0 +1,47 @@
+# Regression cases for spk-code-review.
+#
+# Copy to cases.yaml and replace the examples with real historical PRs that
+# have known issues. Prefer PRs where the issue was found after merge, or in
+# human review, so the expected result is not in doubt.
+
+cases:
+  - id: authz-bypass-101
+    pr: https://github.com/sparkgeo/example/pull/101
+    known_issue: "GET /projects/{id} returns projects without an ownership check."
+    file: src/api/projects.py
+    lines: [40, 61]
+    expected_agent: spk-cr-security
+    expected_severity: blocker
+    expected_risk: high
+    expected_agents: [spk-cr-security, spk-cr-correctness, spk-cr-tests]
+    max_findings: 6
+
+  - id: n-plus-one-102
+    pr: https://github.com/sparkgeo/example/pull/102
+    known_issue: "List endpoint loads each project's owner in a loop."
+    file: src/services/projects.py
+    lines: [88, 97]
+    expected_agent: spk-cr-performance-ops
+    expected_severity: issue
+    expected_risk: medium
+    max_findings: 5
+
+  - id: weak-assertions-103
+    pr: https://github.com/sparkgeo/example/pull/103
+    known_issue: "New retry tests only assert that no exception is raised."
+    file: tests/jobs/test_worker.py
+    lines: [12, 40]
+    expected_agent: spk-cr-tests
+    expected_severity: issue
+    expected_risk: medium
+    max_findings: 4
+
+  - id: docs-only-104
+    pr: https://github.com/sparkgeo/example/pull/104
+    known_issue: null # Clean PR. Tests noise and over-routing.
+    expected_risk: low
+    expected_agents: [spk-cr-docs]
+    forbidden_agents: [spk-cr-performance-ops, spk-cr-architecture]
+    max_findings: 1
+    must_not_report:
+      - "Any finding on README.md prose style"
